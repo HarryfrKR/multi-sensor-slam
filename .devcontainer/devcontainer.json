@@ -1,0 +1,32 @@
+{
+    "name": "MultiSensorSlamDevcontainer",
+    "build": { "dockerfile": "../Dockerfile" },
+    "customizations": {
+        "vscode": {
+            "extensions": [
+                "ms-iot.vscode-ros",
+                "ms-python.python",
+                "ms-vscode.cpptools",
+                "ms-vscode.cpptools-themes",
+                "twxs.cmake",
+                "eamodio.gitlens"
+            ]
+        }
+    },
+    "containerEnv": {
+        "ROS_DOMAIN_ID": "42",
+        "ROS_LOCALHOST_ONLY": "0",
+        "DISPLAY": "unix:0",
+        "ROS_AUTOMATIC_DISCOVERY_RANGE": "LOCALHOST",
+        "IGNITION_VERSION": "fortress",
+        "SHELL": "/bin/bash"
+    },
+    "workspaceMount": "source=${localWorkspaceFolder}/../..,target=/ros2_ws,type=bind",
+    "workspaceFolder": "/ros2_ws",
+    "mounts": [
+        "source=/tmp/.X11-unix,target=/tmp/.X11-unix,type=bind",
+        "source=/dev/dri,target=/dev/dri,type=bind,consistency=cached"
+    ],
+    "runArgs": ["--network=host"],
+    "remoteUser": "vscode"
+}
