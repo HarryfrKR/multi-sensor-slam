@@ -339,10 +339,22 @@ void MapperSensorManager::ClearLastScan(const Name& name)
  */
 void MapperSensorManager::AddScan(LocalizedRangeScan * pScan)
 {
-  GetScanManager(pScan)->AddScan(pScan, m_NextScanId);
-  m_Scans.insert({m_NextScanId, pScan});
-  m_NextScanId++;
+    // Check if the scan is a visual constraint scan
+    VisualConstraintScan* visualScan = dynamic_cast<VisualConstraintScan*>(pScan);
+    
+    if (visualScan) {
+        // Process the visual scan separately
+        visualScans.insert({m_NextScanId, visualScan});
+    } else {
+        // Handle regular scans
+        GetScanManager(pScan)->AddScan(pScan, m_NextScanId);
+    }
+
+    // Store scan
+    m_Scans.insert({m_NextScanId, pScan});
+    m_NextScanId++;
 }
+
 
 /**
  * Adds scan to running scans of device that recorded scan
@@ -1616,23 +1628,25 @@ Edge<LocalizedRangeScan> * MapperGraph::AddEdge(
   return pEdge;
 }
 
-void MapperGraph::LinkScans(
-  LocalizedRangeScan * pFromScan, LocalizedRangeScan * pToScan,
+void MapperGraph::LinkScans(LocalizedRangeScan * pFromScan, LocalizedRangeScan * pToScan,
   const Pose2 & rMean, const Matrix3 & rCovariance)
 {
   kt_bool isNewEdge = true;
   Edge<LocalizedRangeScan> * pEdge = AddEdge(pFromScan, pToScan, isNewEdge);
 
-  if (pEdge == NULL) {
-    return;
+  if (pEdge == NULL) return;
+
+  if (isNewEdge) {
+  // Identify if this is a visual constraint
+  if (dynamic_cast<VisualConstraintScan*>(pFromScan) && dynamic_cast<VisualConstraintScan*>(pToScan)) {
+     pEdge->SetLabel(new LinkInfo(rMean, rMean, rCovariance));
+  } else {
+    pEdge->SetLabel(new LinkInfo(rMean, rMean, rCovariance));
   }
 
-  // only attach link information if the edge is new
-  if (isNewEdge == true) {
-    pEdge->SetLabel(new LinkInfo(pFromScan->GetCorrectedPose(), pToScan->GetCorrectedAt(rMean), rCovariance));
-    if (m_pMapper->m_pScanOptimizer != NULL) {
-      m_pMapper->m_pScanOptimizer->AddConstraint(pEdge);
-    }
+  if (m_pMapper->m_pScanOptimizer != NULL) {
+    m_pMapper->m_pScanOptimizer->AddConstraint(pEdge);
+  }
   }
 }
 
@@ -1661,24 +1675,25 @@ void MapperGraph::LinkNearChains(
 }
 
 void MapperGraph::LinkChainToScan(
-  const LocalizedRangeScanVector & rChain, LocalizedRangeScan * pScan,
-  const Pose2 & rMean, const Matrix3 & rCovariance)
-{
+const LocalizedRangeScanVector & rChain, LocalizedRangeScan * pScan,
+const Pose2 & rMean, const Matrix3 & rCovariance) {
+
+  // Find closest scan in chain
   Pose2 pose = pScan->GetReferencePose(m_pMapper->m_pUseScanBarycenter->GetValue());
-
   LocalizedRangeScan * pClosestScan = GetClosestScanToPose(rChain, pose);
-  assert(pClosestScan != NULL);
 
-  Pose2 closestScanPose =
-    pClosestScan->GetReferencePose(m_pMapper->m_pUseScanBarycenter->GetValue());
+  if (!pClosestScan) return;
 
+  Pose2 closestScanPose = pClosestScan->GetReferencePose(m_pMapper->m_pUseScanBarycenter->GetValue());
   kt_double squaredDistance = pose.GetPosition().SquaredDistance(closestScanPose.GetPosition());
-  if (squaredDistance <
-    math::Square(m_pMapper->m_pLinkScanMaximumDistance->GetValue()) + KT_TOLERANCE)
-  {
-    LinkScans(pClosestScan, pScan, rMean, rCovariance);
+
+  if (squaredDistance < math::Square(m_pMapper->m_pLinkScanMaximumDistance->GetValue()) + KT_TOLERANCE) {
+      // Identify as Visual Constraint if both are from Camera
+      // bool isVisual = (pClosestScan->GetSensorName() == karto::Name("camera") && pScan->GetSensorName() == karto::Name("camera"));
+      LinkScans(pClosestScan, pScan, rMean, rCovariance);
   }
 }
+
 
 std::vector<LocalizedRangeScanVector> MapperGraph::FindNearChains(LocalizedRangeScan * pScan)
 {
@@ -1825,10 +1840,13 @@ LocalizedRangeScanVector MapperGraph::FindNearByScans(
   NearPoseVisitor * pVisitor = new NearPoseVisitor(refPose, maxDistance,
       m_pMapper->m_pUseScanBarycenter->GetValue());
 
-  Vertex<LocalizedRangeScan> * closestVertex = FindNearByScan(name, refPose);
+    Vertex<LocalizedRangeScan> * closestVertex = FindNearByScan(name, refPose);
 
+  std::cout << "lkjhkyulhjkjhk "  << std::endl;
   LocalizedRangeScanVector nearLinkedScans =
     m_pTraversal->TraverseForScans(closestVertex, pVisitor);
+  std::cout << "vmn,vmbmcv,vmbm "  << std::endl;
+
   delete pVisitor;
 
   return nearLinkedScans;
@@ -1879,6 +1897,11 @@ Vertex<LocalizedRangeScan> * MapperGraph::FindNearByScan(Name name, const Pose2 
   VertexMap vertexMap = GetVertices();
   std::map<int, Vertex<LocalizedRangeScan> *> & vertices = vertexMap[name];
 
+
+  if (vertices.empty()) {
+    std::cerr << "Warning: No scans available for frame: " << name << std::endl;
+    return nullptr;
+} 
   std::vector<Vertex<LocalizedRangeScan> *> vertices_to_search;
   std::map<int, Vertex<LocalizedRangeScan> *>::iterator it;
   for (it = vertices.begin(); it != vertices.end(); ++it) {
@@ -1886,6 +1909,12 @@ Vertex<LocalizedRangeScan> * MapperGraph::FindNearByScan(Name name, const Pose2 
       vertices_to_search.push_back(it->second);
     }
   }
+
+  // Fix: Ensure we have valid vertices
+  if (vertices_to_search.empty()) {
+    std::cerr << "Warning: No valid vertices to search!" << std::endl;
+    return nullptr;
+}
 
   size_t num_results = 1;
   const size_t dim = 2;
@@ -1897,6 +1926,13 @@ Vertex<LocalizedRangeScan> * MapperGraph::FindNearByScan(Name name, const Pose2 
       dim> my_kd_tree_t;
 
   my_kd_tree_t index(dim, p2kd, nanoflann::KDTreeSingleIndexAdaptorParams(10) );
+
+  // Fix: Ensure KD-Tree index has valid data
+  if (vertices_to_search.empty()) {
+    std::cerr << "Error: KD-Tree cannot be built because there are no valid scans!" << std::endl;
+    return nullptr;
+}
+
   index.buildIndex();
 
   std::vector<size_t> ret_index(num_results);
@@ -1907,6 +1943,7 @@ Vertex<LocalizedRangeScan> * MapperGraph::FindNearByScan(Name name, const Pose2 
   if (num_results > 0) {
     return vertices_to_search[ret_index[0]];
   } else {
+    std::cerr << "Error: FindNearByScan failed, returning NULL!" << std::endl;
     return NULL;
   }
 }
@@ -2009,25 +2046,132 @@ LocalizedRangeScanVector MapperGraph::FindPossibleLoopClosure(
   return chain;
 }
 
-void MapperGraph::CorrectPoses()
-{
-  // optimize scans!
-  ScanSolver * pSolver = m_pMapper->m_pScanOptimizer;
-  if (pSolver != NULL) {
-    pSolver->Compute();
+void MapperGraph::CorrectPoses() {
+ScanSolver * pSolver = m_pMapper->m_pScanOptimizer;
+if (!pSolver) return;
 
-    const_forEach(ScanSolver::IdPoseVector, &pSolver->GetCorrections())
-    {
-      LocalizedRangeScan * scan = m_pMapper->m_pMapperSensorManager->GetScan(iter->first);
-      if (scan == NULL) {
-        continue;
-      }
-      scan->SetCorrectedPoseAndUpdate(iter->second);
+pSolver->Compute();
+
+const_forEach(ScanSolver::IdPoseVector, &pSolver->GetCorrections()) {
+    LocalizedRangeScan * scan = m_pMapper->m_pMapperSensorManager->GetScan(iter->first);
+    if (!scan) continue;
+
+    Pose2 correctedPose = iter->second;
+
+    // Reduce weight of visual constraints
+    if (scan->GetSensorName() == karto::Name("camera")) {
+        correctedPose = Pose2(correctedPose.GetX(), correctedPose.GetY(), correctedPose.GetHeading() * 0.8);
     }
 
-    pSolver->Clear();
+    scan->SetCorrectedPoseAndUpdate(correctedPose);
+  }
+
+  pSolver->Clear();
+
+}
+
+void MapperGraph::ProcessVisualConstraint(VisualConstraintScan* visualScan) {
+  if (!visualScan) {  // Check if the input is null
+    std::cerr << "Error: Received null visualScan in ProcessVisualConstraint()" << std::endl;
+    return;
+}
+  Pose2 visualPose = visualScan->GetVisualPose();
+
+  // Log the received pose
+  std::cout << "🔍 Processing Visual Constraint at Pose: (" 
+  << visualPose.GetX() << ", " 
+  << visualPose.GetY() << ", " 
+  << visualPose.GetHeading() << ")" << std::endl;
+
+  kt_double maxDistance = 1.5;
+  std::cout << "🔹 Checking max distance: " << maxDistance << std::endl;
+
+  LocalizedRangeScanVector nearbyScans = FindNearByScans(karto::Name("laser"), visualPose, maxDistance);
+
+  Vertex<LocalizedRangeScan>* closestScan1 = GetVertex(nearbyScans[0]);
+  
+  std::cout << "222222222222222222222222222222 "  << std::endl;
+  Vertex<LocalizedRangeScan>* closestScan2 = (nearbyScans.size() > 1) ? GetVertex(nearbyScans[1]) : nullptr;
+  if (!closestScan2 || closestScan2 == closestScan1) {
+    std::cerr << "⚠️ Warning: No valid second LIDAR scan found or duplicate scan detected!" << std::endl;
+    return;
+}
+
+  std::cout << "3333333333333333333333333 " << std::endl;
+
+  // Store the second scan inside a vector, as required by MatchScan
+  LocalizedRangeScanVector scanVector;
+  scanVector.push_back(closestScan2->GetObject());
+
+  // Compute relative pose & covariance
+  Pose2 relativePose;
+  Matrix3 covariance;
+  kt_double response = m_pMapper->m_pSequentialScanMatcher->MatchScan(
+      closestScan1->GetObject(),  // The scan to match
+      scanVector,                 // The vector of scans to match against
+      relativePose, 
+      covariance, 
+      false
+  );
+
+  std::cout << "🔹 Scan matching response: " << response << std::endl;
+
+  // If the scan matching response is good enough, add a visual edge
+  if (response > m_pMapper->m_pLinkMatchMinimumResponseFine->GetValue()) {
+    std::cout << "Adding visual edge with relative pose: (" 
+              << relativePose.GetX() << ", " 
+              << relativePose.GetY() << ", " 
+              << relativePose.GetHeading() << ")" << std::endl;
+    AddVisualEdge(closestScan1, closestScan2, relativePose, covariance);
+  } else {
+      std::cerr << "Scan matching response too low, skipping visual constraint." << std::endl;
   }
 }
+
+
+void MapperGraph::AddVisualEdge(
+  Vertex<LocalizedRangeScan>* scanNode1, 
+  Vertex<LocalizedRangeScan>* scanNode2, 
+  const Pose2& relativePose, 
+  const Matrix3& covariance) {
+  
+  if (!scanNode1 || !scanNode2 || !m_pMapper->m_pScanOptimizer) {
+      return;  // Safety check
+  }
+
+  // Get actual scan objects
+  LocalizedRangeScan* scan1 = scanNode1->GetObject();
+  LocalizedRangeScan* scan2 = scanNode2->GetObject();
+  if (!scan1 || !scan2) return;
+
+  // Create a new edge
+  kt_bool isNewEdge = true;
+  Edge<LocalizedRangeScan>* vEdge = AddEdge(scan1, scan2, isNewEdge);
+
+  if (vEdge && isNewEdge) {
+      vEdge->SetLabel(new LinkInfo(relativePose, relativePose, covariance));
+
+      // Add the constraint to the optimizer
+      m_pMapper->m_pScanOptimizer->AddConstraint(vEdge);
+  }
+}
+
+// /// TO-DO 
+//   Matrix3 covariance;  // Define an appropriate covariance matrix
+//   covariance.SetToIdentity();  // Placeholder, adjust based on your uncertainty model
+
+//   // Add the edge to the graph
+//   this->AddConstraint(laserScanVertex, visualScan, relativePose, covariance);
+// }
+
+// Pose2 ComputeInversePose(const Pose2& pose) {
+//   double x_new = -cos(pose.GetTheta()) * pose.GetX() - sin(pose.GetTheta()) * pose.GetY();
+//   double y_new = sin(pose.GetTheta()) * pose.GetX() - cos(pose.GetTheta()) * pose.GetY();
+//   double theta_new = -pose.GetTheta();  // Invert rotation
+
+//   return Pose2(x_new, y_new, theta_new);
+// }
+
 
 void MapperGraph::UpdateLoopScanMatcher(kt_double rangeThreshold)
 {

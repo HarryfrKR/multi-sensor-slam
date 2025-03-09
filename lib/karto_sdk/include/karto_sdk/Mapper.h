@@ -35,6 +35,7 @@
 #include "rclcpp/rclcpp.hpp"
 #include "Karto.h"  // NOLINT
 #include "nanoflann_adaptors.h"  // NOLINT
+#include "visual_scan.h"
 
 
 namespace karto
@@ -669,7 +670,7 @@ public:
    */
   inline const VertexMap & GetVertices() const
   {
-    return m_Vertices;
+   return m_Vertices;
   }
 
 protected:
@@ -814,6 +815,9 @@ public:
    * @param rangeThreshold
    */
   void UpdateLoopScanMatcher(kt_double rangeThreshold);
+   // for visual constriant
+  void ProcessVisualConstraint(VisualConstraintScan* visualScan);
+  void AddVisualEdge(Vertex<LocalizedRangeScan>* scanNode1, Vertex<LocalizedRangeScan>* scanNode2, const Pose2& relativePose, const Matrix3& covariance);
 
 private:
   /**
@@ -1717,6 +1721,7 @@ public:
    */
   void Clear();
 
+  std::map<int, VisualConstraintScan*> visualScans;
 private:
   /**
    * Get scan manager for localized range scan

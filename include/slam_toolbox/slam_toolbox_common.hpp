@@ -41,6 +41,14 @@
 
 #include "pluginlib/class_loader.hpp"
 
+#include <opencv2/core/core.hpp>
+#include <opencv2/features2d.hpp>
+
+// Undefine potentially conflicting macros
+#ifdef forEach
+#undef forEach
+#endif
+
 #include "slam_toolbox/toolbox_types.hpp"
 #include "slam_toolbox/slam_mapper.hpp"
 #include "slam_toolbox/snap_utils.hpp"
@@ -48,6 +56,12 @@
 #include "slam_toolbox/get_pose_helper.hpp"
 #include "slam_toolbox/map_saver.hpp"
 #include "slam_toolbox/loop_closure_assistant.hpp"
+
+#include "slam_toolbox/camera_utils.hpp"
+#include "slam_toolbox/camera_feature_extraction_node.hpp"
+#include "slam_toolbox/camera_loop_closure_assistant.hpp"
+
+#include <std_srvs/srv/trigger.hpp>  
 
 namespace slam_toolbox
 {
@@ -89,6 +103,10 @@ protected:
     const std::shared_ptr<rmw_request_id_t> request_header,
     const std::shared_ptr<slam_toolbox::srv::DeserializePoseGraph::Request> req,
     std::shared_ptr<slam_toolbox::srv::DeserializePoseGraph::Response> resp);
+  virtual bool manualCameraLoopClosureCallback(
+    const std::shared_ptr<rmw_request_id_t> request_header,
+    const std::shared_ptr<std_srvs::srv::Trigger::Request> req,
+    std::shared_ptr<std_srvs::srv::Trigger::Response> resp);
 
   // Loaders
   void loadSerializedPoseGraph(std::unique_ptr<karto::Mapper> &, std::unique_ptr<karto::Dataset> &);
@@ -139,6 +157,11 @@ protected:
   std::shared_ptr<rclcpp::Service<slam_toolbox::srv::Pause>> ssPauseMeasurements_;
   std::shared_ptr<rclcpp::Service<slam_toolbox::srv::SerializePoseGraph>> ssSerialize_;
   std::shared_ptr<rclcpp::Service<slam_toolbox::srv::DeserializePoseGraph>> ssDesserialize_;
+
+  std::shared_ptr<camera_utils::KeyframeHolder> keyframe_holder_;
+  std::shared_ptr<CameraFeatureExtractionNode> camera_feature_extraction_;
+  std::shared_ptr<loop_closure_assistant::CameraLoopClosureAssistant> camera_closure_assistant_;
+  rclcpp::Service<std_srvs::srv::Trigger>::SharedPtr ssCameraLoopClosure_;
 
   // Storage for ROS parameters
   std::string odom_frame_, map_frame_, base_frame_, map_name_, scan_topic_;

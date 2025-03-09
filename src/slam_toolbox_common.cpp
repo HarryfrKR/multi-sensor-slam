@@ -22,6 +22,8 @@
 #include <chrono>
 #include "slam_toolbox/slam_toolbox_common.hpp"
 #include "slam_toolbox/serialization.hpp"
+#include <std_srvs/srv/trigger.hpp> 
+
 
 namespace slam_toolbox
 {
@@ -55,7 +57,7 @@ void SlamToolbox::configure()
   setParams();
   setROSInterfaces();
   setSolver();
-
+  
   laser_assistant_ = std::make_unique<laser_utils::LaserAssistant>(
     shared_from_this(), tf_.get(), base_frame_);
   pose_helper_ = std::make_unique<pose_utils::GetPoseHelper>(
@@ -69,6 +71,22 @@ void SlamToolbox::configure()
     std::make_unique<loop_closure_assistant::LoopClosureAssistant>(
     shared_from_this(), smapper_->getMapper(), scan_holder_.get(),
     state_, processor_type_);
+
+  keyframe_holder_ = std::make_shared<camera_utils::KeyframeHolder>();
+
+  auto camera_node = std::make_shared<CameraFeatureExtractionNode>(keyframe_holder_);
+  
+  // Add a thread to spin the CameraFeatureExtractionNode
+  threads_.push_back(std::make_unique<boost::thread>(
+      [camera_node]() {
+          rclcpp::spin(camera_node);
+      }
+  ));
+  
+  camera_closure_assistant_ = std::make_shared<loop_closure_assistant::CameraLoopClosureAssistant>(
+      shared_from_this(), smapper_->getMapper(), keyframe_holder_);
+    
+  
   reprocessing_transform_.setIdentity();
 
   double transform_publish_period = 0.05;
@@ -98,6 +116,9 @@ SlamToolbox::~SlamToolbox()
   laser_assistant_.reset();
   scan_holder_.reset();
   solver_.reset();
+  camera_closure_assistant_.reset();
+  keyframe_holder_.reset();
+
 }
 
 /*****************************************************************************/
@@ -229,6 +250,10 @@ void SlamToolbox::setROSInterfaces()
     "slam_toolbox/deserialize_map",
     std::bind(&SlamToolbox::deserializePoseGraphCallback, this,
     std::placeholders::_1, std::placeholders::_2, std::placeholders::_3));
+  ssCameraLoopClosure_ = this->create_service<std_srvs::srv::Trigger>(
+    "slam_toolbox/manual_camera_loop_closure",
+    std::bind(&SlamToolbox::manualCameraLoopClosureCallback, this,
+    std::placeholders::_1, std::placeholders::_2, std::placeholders::_3));
 
   scan_filter_sub_ =
     std::make_unique<message_filters::Subscriber<sensor_msgs::msg::LaserScan>>(
@@ -239,6 +264,26 @@ void SlamToolbox::setROSInterfaces()
     tf2::durationFromSec(transform_timeout_.seconds()));
   scan_filter_->registerCallback(
     std::bind(&SlamToolbox::laserCallback, this, std::placeholders::_1));
+}
+
+bool SlamToolbox::manualCameraLoopClosureCallback(
+  const std::shared_ptr<rmw_request_id_t> request_header,
+  const std::shared_ptr<std_srvs::srv::Trigger::Request> req,
+  std::shared_ptr<std_srvs::srv::Trigger::Response> resp) 
+{
+  if (!camera_closure_assistant_) {
+      RCLCPP_ERROR(get_logger(), "Camera Loop Closure Assistant is not initialized!");
+      resp->success = false;
+      resp->message = "Failed: Camera Loop Closure Assistant not found.";
+      return false;
+  }
+
+  // Call the corrected function with the correct service type
+  bool success = camera_closure_assistant_->manualLoopClosureCallback(request_header, req, resp);
+  resp->success = success;
+  resp->message = success ? "Camera loop closure executed successfully" : "Camera loop closure failed";
+
+  return true;
 }
 
 /*****************************************************************************/

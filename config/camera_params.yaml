@@ -1,0 +1,31 @@
+camera_feature_extraction:
+  ros__parameters:
+    camera_topic: "/color/image_raw"  # Change based on your camera topic
+    orb_features_topic: "/camera/orb_features"  # The output topic
+    use_sim_time: true  # Set to true if using Gazebo or ROS2 simulation
+    feature_type: "ORB"  # ORB, SIFT, SURF (currently supports ORB)
+    num_features: 500  # Max number of ORB features
+    scale_factor: 1.2  # Scale factor for the image pyramid
+    num_levels: 8  # Number of pyramid levels
+    edge_threshold: 31  # Edge threshold size
+    first_level: 0  # First pyramid level
+    WTA_K: 2  # The number of points used for BRIEF descriptor
+    score_type: "HARRIS"  # Scoring method (HARRIS or FAST)
+    patch_size: 31  # Patch size for ORB extraction
+    fast_threshold: 20  # Threshold for FAST keypoint detection
+    min_matches: 300  # Minimum number of ORB matches required for loop closure
+    camera_frame: "camera_color_optical_frame"  # Frame of the camera
+    odom_frame: "odom"  # The reference frame for transformations
+    tf_wait_time: 1.0  # Time to wait for TF lookup
+
+    # Camera intrinsics (adjust these for your camera)
+    fx: 616.4  # Focal length in x
+    fy: 616.7  # Focal length in y
+    cx: 318.2  # Optical center x
+    cy: 244.5  # Optical center y
+    baseline: 0.075  # Baseline distance (for stereo cameras)
+
+    # Debugging & Logging
+    debug: true  # Enable debug logs
+    visualize_keypoints: true
+      # Enable visualization in Rviz or OpenCV
