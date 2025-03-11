@@ -208,6 +208,12 @@ install(TARGETS async_slam_toolbox_node
   RUNTIME DESTINATION lib/${PROJECT_NAME}
 )
 
+
+install(
+  PROGRAMS src/tf_broadcaster_node.py
+  DESTINATION lib/${PROJECT_NAME}
+)
+
 install(TARGETS SlamToolboxPlugin
   EXPORT SlamToolboxPlugin
   ARCHIVE DESTINATION lib
