@@ -32,6 +32,9 @@ find_package(rviz_rendering REQUIRED)
 find_package(interactive_markers REQUIRED)
 find_package(Qt5 REQUIRED COMPONENTS Core Gui Widgets Test Concurrent)
 find_package(rclcpp_components REQUIRED)
+find_package(OpenCV REQUIRED)
+find_package(PCL REQUIRED)
+find_package(cv_bridge REQUIRED)
 
 #karto_sdk lib
 set(BUILD_SHARED_LIBS ON)
@@ -60,6 +63,9 @@ set(dependencies
   interactive_markers
   Qt5
   rclcpp_components
+  OpenCV
+  PCL
+  cv_bridge
 )
 
 set(libraries
@@ -91,9 +97,13 @@ include_directories(include lib/karto_sdk/include
                             ${Boost_INCLUDE_DIRS}
                             ${TBB_INCLUDE_DIRS}
                             ${CERES_INCLUDES}
+                            ${OpenCV_INCLUDE_DIRS}
+                            ${PCL_INCLUDE_DIRS}
+                            ${rclcpp_INCLUDE_DIRS}
 )
 
 add_definitions(${EIGEN3_DEFINITIONS})
+add_definitions(${OpenCV_DEFINITIONS})
 
 rosidl_generate_interfaces(${PROJECT_NAME}
   srv/Pause.srv
@@ -179,6 +189,20 @@ target_link_libraries(map_and_localization_slam_toolbox_node map_and_localizatio
 add_executable(merge_maps_kinematic src/merge_maps_kinematic.cpp)
 target_link_libraries(merge_maps_kinematic kartoSlamToolbox toolbox_common)
 
+
+#### New Camera Feature Libraries
+add_library(camera_utils src/camera_utils.cpp)
+ament_target_dependencies(camera_utils rclcpp ${dependencies})
+target_link_libraries(camera_utils kartoSlamToolbox ${OpenCV_LIBRARIES} ${PCL_LIBRARIES} ${cpp_typesupport_target})
+ 
+add_library(ORBextractor src/ORBextractor.cpp)
+ament_target_dependencies(ORBextractor rclcpp ${dependencies})
+target_link_libraries(ORBextractor ${OpenCV_LIBRARIES} ${PCL_LIBRARIES})
+
+add_executable(camera_feature_extraction_node src/camera_feature_extraction_node.cpp)
+ament_target_dependencies(camera_feature_extraction_node rclcpp ${dependencies})
+target_link_libraries(camera_feature_extraction_node camera_utils ORBextractor kartoSlamToolbox ${OpenCV_LIBRARIES})
+
 #### testing
 #if(BUILD_TESTING)
 #  find_package(ament_cmake_gtest REQUIRED)
@@ -200,6 +224,7 @@ install(TARGETS async_slam_toolbox_node
                 sync_slam_toolbox_node
                 localization_slam_toolbox_node
                 map_and_localization_slam_toolbox_node
+                camera_feature_extraction_node
                 merge_maps_kinematic
                 ${libraries}
                 kartoSlamToolbox
@@ -212,6 +237,19 @@ install(TARGETS async_slam_toolbox_node
 install(
   PROGRAMS src/tf_broadcaster_node.py
   DESTINATION lib/${PROJECT_NAME}
+)
+
+# Install ORBextractor library
+install(TARGETS ORBextractor
+  ARCHIVE DESTINATION lib
+  LIBRARY DESTINATION lib
+  RUNTIME DESTINATION bin
+)
+ 
+install(TARGETS camera_utils
+  ARCHIVE DESTINATION lib
+  LIBRARY DESTINATION lib
+  RUNTIME DESTINATION bin
 )
 
 install(TARGETS SlamToolboxPlugin
