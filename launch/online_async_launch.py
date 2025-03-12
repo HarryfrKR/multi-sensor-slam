@@ -38,12 +38,12 @@ def generate_launch_description():
         name='tf_broadcaster',
         output='screen')
     
-    # Start Feature Extraction Node
-    start_camera_feature_extraction_node = Node(
-        package='slam_toolbox',
-        executable='camera_feature_extraction_node',
-        name='camera_feature_extraction_node',
-        output='screen')
+    # # Start Feature Extraction Node
+    # start_camera_feature_extraction_node = Node(
+    #     package='slam_toolbox',
+    #     executable='camera_feature_extraction_node',
+    #     name='camera_feature_extraction_node',
+    #     output='screen')
 
     # Start RViz2 with a configuration file
     rviz_config_file = os.path.join(get_package_share_directory('slam_toolbox'), 'config', 'multi_sensor_slam_config.rviz')
@@ -60,7 +60,7 @@ def generate_launch_description():
     ld.add_action(declare_slam_params_file_cmd)
     ld.add_action(start_async_slam_toolbox_node)
     ld.add_action(start_tf_broadcaster_node)
-    ld.add_action(start_camera_feature_extraction_node)
+    # ld.add_action(start_camera_feature_extraction_node)
     ld.add_action(start_rviz2_node)
 
     return ld

@@ -30,12 +30,19 @@ CameraLoopClosureAssistant::CameraLoopClosureAssistant(
     //     "slam_toolbox/clear_changes", std::bind(&LoopClosureAssistant::clearChangesCallback, 
     //     this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3));
     
-    ssLoopClosure_ = node_->create_service<std_srvs::srv::Trigger>(
-        "slam_toolbox/manual_camera_loop_closure",
-        std::bind(&CameraLoopClosureAssistant::manualLoopClosureCallback, this,
-        std::placeholders::_1, std::placeholders::_2, std::placeholders::_3));    
+    auto camera_feature_extractor_= std::make_shared<CameraFeatureExtractionNode>(keyframe_holder_);
+    // ssLoopClosure_ = node_->create_service<std_srvs::srv::Trigger>(
+    //     "slam_toolbox/manual_camera_loop_closure",
+    //     std::bind(&CameraLoopClosureAssistant::manualLoopClosureCallback, this,
+    //     std::placeholders::_1, std::placeholders::_2, std::placeholders::_3)); 
+    
+    threads_.push_back(std::make_unique<boost::thread>(
+        [camera_feature_extractor_]() {
+            rclcpp::spin(camera_feature_extractor_);
+        }
+    ));
 
-    // 🔹 Start automatic loop closure detection timer (Runs every 5 seconds)
+    // Start automatic loop closure detection timer (Runs every 5 seconds)
     loop_closure_timer_ = node_->create_wall_timer(
         std::chrono::seconds(10),
         std::bind(&CameraLoopClosureAssistant::automaticLoopClosure, this)
@@ -176,11 +183,11 @@ void CameraLoopClosureAssistant::automaticLoopClosure() {
     std_srvs::srv::Trigger::Request::SharedPtr req = std::make_shared<std_srvs::srv::Trigger::Request>();
     std_srvs::srv::Trigger::Response::SharedPtr resp = std::make_shared<std_srvs::srv::Trigger::Response>();
 
-    if (manualLoopClosureCallback(nullptr, req, resp)) {
-        RCLCPP_INFO(node_->get_logger(), "Loop closure successful: %s", resp->message.c_str());
-    } else {
-        RCLCPP_WARN(node_->get_logger(), "Loop closure failed: %s", resp->message.c_str());
-    }
+    // if (manualLoopClosureCallback(nullptr, req, resp)) {
+    //     RCLCPP_INFO(node_->get_logger(), "Loop closure successful: %s", resp->message.c_str());
+    // } else {
+    //     RCLCPP_WARN(node_->get_logger(), "Loop closure failed: %s", resp->message.c_str());
+    // }
 }
 
 // bool CameraLoopClosureAssistant::manualLoopClosureCallback(

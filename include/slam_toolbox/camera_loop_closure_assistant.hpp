@@ -38,25 +38,27 @@ public:
     CameraLoopClosureAssistant(
         rclcpp::Node::SharedPtr node, 
         karto::Mapper *mapper, 
-        std::shared_ptr<camera_utils::KeyframeHolder> *keyframe_holder);
+        std::shared_ptr<camera_utils::KeyframeHolder> keyframe_holder);
 
     void publishGraph();
     void setMapper(karto::Mapper * mapper);
     /**
      * Callback for manual loop closure detection (Service)
      */
-    bool manualLoopClosureCallback(
-        const std::shared_ptr<rmw_request_id_t> request_header,
-        const std::shared_ptr<std_srvs::srv::Trigger::Request> req,
-        std::shared_ptr<std_srvs::srv::Trigger::Response> resp);
+    // bool manualLoopClosureCallback(
+    //     const std::shared_ptr<rmw_request_id_t> request_header,
+    //     const std::shared_ptr<std_srvs::srv::Trigger::Request> req,
+    //     std::shared_ptr<std_srvs::srv::Trigger::Response> resp);
 
 private:
     void automaticLoopClosure();
-
+    
+    std::vector<std::unique_ptr<boost::thread>> threads_;
     rclcpp::Node::SharedPtr node_; 
     karto::Mapper *mapper_;
     karto::ScanSolver * solver_;
-    camera_utils::FeatureExtraction feature_extractor_; 
+    std::shared_ptr<CameraFeatureExtractionNode> camera_feature_extractor_;
+    // camera_utils::FeatureExtraction feature_extractor_; 
     std::shared_ptr<camera_utils::KeyframeHolder> keyframe_holder_; 
     std::unique_ptr<tf2_ros::TransformBroadcaster> tfB_; 
     rclcpp::Publisher<visualization_msgs::msg::MarkerArray>::SharedPtr marker_publisher_;

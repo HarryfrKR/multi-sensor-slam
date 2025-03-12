@@ -91,7 +91,7 @@ void CameraFeatureExtractionNode::imageCallback(const sensor_msgs::msg::Image::S
 
 void CameraFeatureExtractionNode::processKeyframe() {
     if (!last_image_msg_ || keypoints_.empty() || descriptors_.empty()) {
-        RCLCPP_WARN(this->get_logger(), "Skipping keyframe check - No valid features.");
+        RCLCPP_WARN(this->get_logger(), "Waiting for Image msg...");
         return;
     }
 
@@ -163,21 +163,13 @@ void CameraFeatureExtractionNode::publishKeypoints(const vector<KeyPoint>& keypo
         return;
     }
 
-    if (!tf_buffer_ || !tf_listener_) {
-        RCLCPP_ERROR(this->get_logger(), "TF Buffer or Listener not initialized!");
-        return;
-    }
-
     cv::Mat image_with_keypoints = image.clone();
-
     cv::drawKeypoints(image, keypoints, image_with_keypoints, cv::Scalar(0, 255, 0), cv::DrawMatchesFlags::DRAW_OVER_OUTIMG);
 
     sensor_msgs::msg::Image image_msg = *(cv_bridge::CvImage(std_msgs::msg::Header(), "bgr8", image_with_keypoints).toImageMsg());
-
     image_msg.header.stamp = this->now();
     //image_msg.header.frame_id = "camera_frame";
 
-    // Publish the image
     if (orb_feature_pub_) {
         orb_feature_pub_->publish(image_msg);
     } else {
@@ -187,9 +179,9 @@ void CameraFeatureExtractionNode::publishKeypoints(const vector<KeyPoint>& keypo
 
 int main(int argc, char **argv) {
     rclcpp::init(argc, argv);
-    // Create a shared KeyframeHolder
+
     auto keyframe_holder = std::make_shared<camera_utils::KeyframeHolder>();
-    // Pass the keyframe holder to CameraFeatureExtractionNode
+
     auto camera_node = std::make_shared<CameraFeatureExtractionNode>(keyframe_holder);
     rclcpp::spin(camera_node);
     rclcpp::shutdown();

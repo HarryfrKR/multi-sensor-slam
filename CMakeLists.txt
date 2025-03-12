@@ -151,11 +151,11 @@ target_link_libraries(ceres_solver_plugin "${cpp_typesupport_target}")
 pluginlib_export_plugin_description_file(slam_toolbox solver_plugins.xml)
 
 #### Tool lib for mapping
-add_library(toolbox_common src/slam_toolbox_common.cpp src/map_saver.cpp src/loop_closure_assistant.cpp src/laser_utils.cpp src/slam_mapper.cpp)
-ament_target_dependencies(toolbox_common
-  ${dependencies}
-)
-target_link_libraries(toolbox_common kartoSlamToolbox ${Boost_LIBRARIES})
+add_library(toolbox_common src/slam_toolbox_common.cpp src/map_saver.cpp src/loop_closure_assistant.cpp src/laser_utils.cpp src/slam_mapper.cpp
+src/ORBextractor.cpp src/camera_loop_closure_assistant.cpp src/camera_utils.cpp src/camera_feature_extraction_node.cpp)
+ament_target_dependencies(toolbox_common ${dependencies})
+
+target_link_libraries(toolbox_common kartoSlamToolbox camera_utils ORBextractor ${OpenCV_LIBRARIES} ${Boost_LIBRARIES})
 rosidl_get_typesupport_target(cpp_typesupport_target ${PROJECT_NAME} "rosidl_typesupport_cpp")
 target_link_libraries(toolbox_common "${cpp_typesupport_target}")
 
@@ -192,17 +192,20 @@ target_link_libraries(merge_maps_kinematic kartoSlamToolbox toolbox_common)
 
 #### New Camera Feature Libraries
 add_library(camera_utils src/camera_utils.cpp)
-ament_target_dependencies(camera_utils rclcpp ${dependencies})
+ament_target_dependencies(camera_utils ${dependencies})
 target_link_libraries(camera_utils kartoSlamToolbox ${OpenCV_LIBRARIES} ${PCL_LIBRARIES} ${cpp_typesupport_target})
  
 add_library(ORBextractor src/ORBextractor.cpp)
-ament_target_dependencies(ORBextractor rclcpp ${dependencies})
+ament_target_dependencies(ORBextractor ${dependencies})
 target_link_libraries(ORBextractor ${OpenCV_LIBRARIES} ${PCL_LIBRARIES})
 
 add_executable(camera_feature_extraction_node src/camera_feature_extraction_node.cpp)
-ament_target_dependencies(camera_feature_extraction_node rclcpp ${dependencies})
+ament_target_dependencies(camera_feature_extraction_node ${dependencies})
 target_link_libraries(camera_feature_extraction_node camera_utils ORBextractor kartoSlamToolbox ${OpenCV_LIBRARIES})
 
+add_library(camera_loop_closure_assistant src/camera_loop_closure_assistant.cpp)
+ament_target_dependencies(camera_loop_closure_assistant ${dependencies})
+target_link_libraries(camera_loop_closure_assistant camera_utils ORBextractor kartoSlamToolbox ${OpenCV_LIBRARIES} ${cpp_typesupport_target})
 #### testing
 #if(BUILD_TESTING)
 #  find_package(ament_cmake_gtest REQUIRED)

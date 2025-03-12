@@ -65,10 +65,14 @@ void SlamToolbox::configure()
     map_saver_ = std::make_unique<map_saver::MapSaver>(shared_from_this(),
         map_name_);
   }
+  keyframe_holder_ = std::make_shared<camera_utils::KeyframeHolder>();
   closure_assistant_ =
     std::make_unique<loop_closure_assistant::LoopClosureAssistant>(
     shared_from_this(), smapper_->getMapper(), scan_holder_.get(),
     state_, processor_type_);
+  camera_closure_assistant_ = std::make_shared<loop_closure_assistant::CameraLoopClosureAssistant>(
+    shared_from_this(), smapper_->getMapper(), keyframe_holder_);
+
   reprocessing_transform_.setIdentity();
 
   double transform_publish_period = 0.05;
@@ -98,6 +102,8 @@ SlamToolbox::~SlamToolbox()
   laser_assistant_.reset();
   scan_holder_.reset();
   solver_.reset();
+  keyframe_holder_.reset();
+  camera_closure_assistant_.reset();
 }
 
 /*****************************************************************************/
@@ -229,7 +235,10 @@ void SlamToolbox::setROSInterfaces()
     "slam_toolbox/deserialize_map",
     std::bind(&SlamToolbox::deserializePoseGraphCallback, this,
     std::placeholders::_1, std::placeholders::_2, std::placeholders::_3));
-
+  // ssCameraLoopClosure_ = this->create_service<std_srvs::srv::Trigger>(
+  //   "slam_toolbox/manual_camera_loop_closure",
+  //   std::bind(&SlamToolbox::manualCameraLoopClosureCallback, this,
+  //   std::placeholders::_1, std::placeholders::_2, std::placeholders::_3));
   scan_filter_sub_ =
     std::make_unique<message_filters::Subscriber<sensor_msgs::msg::LaserScan>>(
     shared_from_this().get(), scan_topic_, rmw_qos_profile_sensor_data);
