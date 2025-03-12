@@ -21,6 +21,7 @@ public:
 private:
     rclcpp::Subscription<sensor_msgs::msg::Image>::SharedPtr image_sub_;
     rclcpp::Publisher<sensor_msgs::msg::Image>::SharedPtr orb_feature_pub_;
+    rclcpp::TimerBase::SharedPtr keyframe_timer_;
 
     std::shared_ptr<camera_utils::FeatureExtraction> feature_extractor_; 
     std::shared_ptr<camera_utils::KeyframeHolder> keyframe_holder_; 
@@ -28,8 +29,11 @@ private:
     std::shared_ptr<tf2_ros::TransformListener> tf_listener_;
 
     std::shared_ptr<sensor_msgs::msg::Image> last_image_msg_; 
+    std::vector<cv::KeyPoint> keypoints_;
+    cv::Mat descriptors_; 
     
     void imageCallback(const sensor_msgs::msg::Image::SharedPtr msg);
+    void processKeyframe();
     void publishKeypoints(const std::vector<cv::KeyPoint>& keypoints, const cv::Mat &image);
     std::pair<std::vector<cv::KeyPoint>, cv::Mat> extractFeatures(const cv::Mat &image);
     bool isKeyframe(const std::vector<cv::KeyPoint>& keypoints, const cv::Mat& descriptors);

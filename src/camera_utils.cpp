@@ -5,18 +5,14 @@
 #include <vector>
 #include <memory>
 
-//#include <opencv2/opencv.hpp>
-// #include <opencv2/core/core.hpp>
-// #include <opencv2/highgui/highgui.hpp>
-// #include <opencv2/features2d/features2d.hpp>
-// #include <opencv2/imgproc/imgproc.hpp>
 
 #include "slam_toolbox/camera_utils.hpp"
-// #include "slam_toolbox/ORBextractor.h"
+
 
 using namespace cv;
 using namespace std;
 using namespace orb;
+using namespace karto;
 
 namespace camera_utils {
 
@@ -45,7 +41,6 @@ void KeyframeHolder::clear() {
     keyframes_.clear();
 }
 
-
 FeatureExtraction::FeatureExtraction() {
     try {
         int nFeatures = 100;
@@ -73,9 +68,6 @@ void FeatureExtraction::extractFeatures(const cv::Mat& image, std::vector<cv::Ke
         return;
     }
 
-    //RCLCPP_INFO(rclcpp::get_logger("FeatureExtraction"), " Processing image - Size: %dx%d, Type: %d",
-     //           image.cols, image.rows, image.type());
-
     std::vector<int> vLappingArea = {0, image.cols};
     // cv::Mat mask = cv::noArray();  // Empty mask
 
@@ -84,7 +76,6 @@ void FeatureExtraction::extractFeatures(const cv::Mat& image, std::vector<cv::Ke
         return;
     } 
 
-    // RCLCPP_INFO(rclcpp::get_logger("FeatureExtraction"), "Running ORBextractor...");
     orb_extractor_->operator()(image, noArray(), keypoints, descriptors, vLappingArea);
     // RCLCPP_INFO(rclcpp::get_logger("FeatureExtraction"), "Extracted %lu keypoints.", keypoints.size());
 
@@ -108,17 +99,9 @@ vector<DMatch> FeatureExtraction::matchFeaturesFLANN(const Mat& descriptors1, co
         return {};  // Return empty vector
     }
 
-    // Log descriptor types
-    // RCLCPP_INFO(rclcpp::get_logger("FeatureExtraction"), 
-    //             "Descriptor1 Type: %d, Descriptor2 Type: %d", descriptors1.type(), descriptors2.type());
-
     Mat desc1, desc2;
     descriptors1.convertTo(desc1, CV_32F);
     descriptors2.convertTo(desc2, CV_32F);
-
-    // Log converted descriptor types
-    // RCLCPP_INFO(rclcpp::get_logger("FeatureExtraction"), 
-    //             "Converted Descriptor1 Type: %d, Converted Descriptor2 Type: %d", desc1.type(), desc2.type());
 
     if (desc1.cols != desc2.cols || desc1.cols != 32) {  // ORB descriptors are always 32 bytes
         RCLCPP_ERROR(rclcpp::get_logger("FeatureExtraction"), 
@@ -153,7 +136,6 @@ vector<DMatch> FeatureExtraction::matchFeaturesFLANN(const Mat& descriptors1, co
             good_matches.push_back(match[0]);
         }
     }
-
     RCLCPP_INFO(rclcpp::get_logger("FeatureExtraction"), "FLANN Matching found %lu good matches.", good_matches.size());
     return good_matches;
 
@@ -208,4 +190,28 @@ vector<DMatch> FeatureExtraction::filterMatchesWithRANSAC(
 
     return filtered_matches;
 }
+
+bool FeatureExtraction::computeRelativePose(const vector<DMatch>& matches, 
+    const vector<KeyPoint>& keypoints1, 
+    const vector<KeyPoint>& keypoints2, 
+    Pose2 & visualPose) {
+        
+    vector<Point2f> points1, points2;
+    for (const auto& match : matches) {
+    points1.push_back(keypoints1[match.queryIdx].pt);
+    points2.push_back(keypoints2[match.trainIdx].pt);
+    }
+
+    cv::Mat K = (cv::Mat_<double>(3, 3) <<  910.1874389648438,  0.0,                623.305908203125,  // fx,  0, cx
+                        0.0,                910.4207763671875, 378.3083190917969,  //  0, fy, cy
+                        0.0,                 0.0,                1.0);  //  0,  0,  1
+    Mat E = findEssentialMat(points1, points2, K, RANSAC, 0.999, 1.0 ); // confidence, pixel error
+    Mat R, t;
+    recoverPose(E, points1, points2, R, t);
+
+    double theta = atan2(R.at<double>(1, 0), R.at<double>(0, 0));
+    visualPose = Pose2(t.at<double>(0, 0), t.at<double>(1, 0), theta);
+
+    return true; // Success
+    }
 }  // namespace camera_utils

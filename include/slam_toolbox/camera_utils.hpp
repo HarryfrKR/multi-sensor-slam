@@ -12,6 +12,7 @@
 #include <opencv2/features2d.hpp>
 #include <opencv2/imgproc.hpp>
 #include <opencv2/calib3d.hpp>
+#include <karto_sdk/Karto.h>
 
 // ROS includes
 #include <sensor_msgs/msg/image.hpp>
@@ -22,10 +23,10 @@
 #include <cv_bridge/cv_bridge.h>
 #include <slam_toolbox/ORBextractor.h>
 
+
 namespace camera_utils {
 
 struct Keyframe {
-    std::shared_ptr<sensor_msgs::msg::Image> image;  
     std::vector<cv::KeyPoint> keypoints;
     cv::Mat descriptors;
 };
@@ -52,6 +53,7 @@ struct Keyframe {
 // };
 
 // ======================== Image Holder ============================
+
 class KeyframeHolder {
 public:
     KeyframeHolder();
@@ -79,11 +81,14 @@ public:
     std::vector<cv::DMatch> filterMatchesWithRANSAC(const std::vector<cv::DMatch>& matches, 
                                                         const std::vector<cv::KeyPoint>& keypoints1, 
                                                         const std::vector<cv::KeyPoint>& keypoints2);
+    bool computeRelativePose(const std::vector<cv::DMatch>& matches, 
+        const std::vector<cv::KeyPoint>& keypoints1, 
+        const std::vector<cv::KeyPoint>& keypoints2, 
+        karto::Pose2 &visualPose);
 
 private:
     std::shared_ptr<orb::ORBextractor> orb_extractor_;  // orb namespace is defined in ORBextractor.h
 };
-
 }  // namespace camera_utils
 
 #endif  // CAMERA_UTILS_HPP_
