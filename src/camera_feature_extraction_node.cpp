@@ -6,7 +6,9 @@
 #include <tf2_ros/transform_listener.h>
 #include <tf2_ros/buffer.h>
 #include <tf2_geometry_msgs/tf2_geometry_msgs.hpp>
+#include <tf2/utils.h>  
 #include <karto_sdk/Karto.h>
+
 
 #include "slam_toolbox/camera_feature_extraction_node.hpp"
 
@@ -96,15 +98,19 @@ std::pair<std::vector<cv::KeyPoint>, cv::Mat> CameraFeatureExtractionNode::extra
 }
 
 bool CameraFeatureExtractionNode::isKeyframe(const std::vector<cv::KeyPoint>& keypoints, const cv::Mat& descriptors) {
+    Pose2 estimatedPose = getRobotPose();
+    
     if (keyframe_holder_->size() == 0) {
         // First frame is always stored as a keyframe
-        Keyframe new_keyframe{keypoints, descriptors.clone()};
+        previous_keyframe_pose_ = estimatedPose; 
+        Keyframe new_keyframe{keypoints, descriptors.clone(), estimatedPose};
         keyframe_holder_->addKeyframe(new_keyframe);
-        RCLCPP_INFO(this->get_logger(), "First frame - Saving as keyframe with %lu keypoints", new_keyframe.keypoints.size());
+        RCLCPP_INFO(this->get_logger(), "First frame - Saving as keyframe.");
         return true;
     }
 
     try {
+        // Get last keyframe and match features
         const Keyframe& last_kf = keyframe_holder_->getKeyframe(keyframe_holder_->size() - 1);
         vector<DMatch> matches = feature_extractor_->matchFeatures(descriptors, last_kf.descriptors);
 
@@ -113,26 +119,34 @@ bool CameraFeatureExtractionNode::isKeyframe(const std::vector<cv::KeyPoint>& ke
             return false;
         }
 
+        // Compute relative pose
         Pose2 relativePose;
         feature_extractor_->computeRelativePose(matches, keypoints, last_kf.keypoints, relativePose);
 
-        double translation_threshold = 0.3;  // 30 cm movement
+        // Define motion thresholds
+        double translation_threshold = 0.3;  // 30 cm
         double rotation_threshold = 0.15;    // ~8.5 degrees
 
-        double translation_magnitude = sqrt(pow(relativePose.GetX(), 2) + pow(relativePose.GetY(), 2));
-        double rotation_change = fabs(relativePose.GetHeading());
+        // Compute pose difference from last saved keyframe
+        double dx = estimatedPose.GetX() - previous_keyframe_pose_.GetX();
+        double dy = estimatedPose.GetY() - previous_keyframe_pose_.GetY();
+        double dtheta = std::fabs(estimatedPose.GetHeading() - previous_keyframe_pose_.GetHeading());
 
-        if (translation_magnitude > translation_threshold || rotation_change > rotation_threshold) {
-            Keyframe new_keyframe{keypoints, descriptors.clone()};
+        double translation_magnitude = std::sqrt(dx * dx + dy * dy);
+
+        // Check if movement is significant
+        if (translation_magnitude > translation_threshold || dtheta > rotation_threshold) {
+            previous_keyframe_pose_ = estimatedPose; 
+            Keyframe new_keyframe{keypoints, descriptors.clone(), estimatedPose};
             keyframe_holder_->addKeyframe(new_keyframe);
-            RCLCPP_INFO(this->get_logger(), "Added new keyframe. Translation: %.2fm, Rotation: %.2frad", 
-                        translation_magnitude, rotation_change);
+            RCLCPP_INFO(this->get_logger(), "Added new keyframe with estimated pose (%.2f, %.2f, %.2f)",
+                        estimatedPose.GetX(), estimatedPose.GetY(), estimatedPose.GetHeading());
             return true;
         } else {
             RCLCPP_INFO(this->get_logger(), "No significant motion detected. Skipping keyframe.");
+            return false;
         }
 
-        return false;
     } catch (const std::exception &e) {
         RCLCPP_ERROR(this->get_logger(), "Exception in keyframe processing: %s", e.what());
         return false;
@@ -157,6 +171,29 @@ void CameraFeatureExtractionNode::publishKeypoints(const vector<KeyPoint>& keypo
     } else {
         RCLCPP_ERROR(this->get_logger(),"Image publisher is not initialized.");
     }
+}
+
+karto::Pose2 CameraFeatureExtractionNode::getRobotPose() {
+    geometry_msgs::msg::TransformStamped transform;
+
+    try {
+        transform = tf_buffer_->lookupTransform("map", "base_link", tf2::TimePointZero);
+    } catch (tf2::TransformException &ex) {
+        RCLCPP_WARN(this->get_logger(), "Could not transform base_link to map: %s", ex.what());
+        return karto::Pose2(0.0, 0.0, 0.0); // Return a default pose if transformation fails
+    }
+
+    tf2::Quaternion quat(
+        transform.transform.rotation.x,
+        transform.transform.rotation.y,
+        transform.transform.rotation.z,
+        transform.transform.rotation.w);
+
+    double yaw = tf2::getYaw(quat);
+
+    return karto::Pose2(transform.transform.translation.x, 
+                        transform.transform.translation.y,
+                        yaw);
 }
 
 int main(int argc, char **argv) {

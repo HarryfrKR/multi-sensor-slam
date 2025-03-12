@@ -85,7 +85,7 @@ void FeatureExtraction::extractFeatures(const cv::Mat& image, std::vector<cv::Ke
 vector<DMatch> FeatureExtraction::matchFeatures(
     // for binary string descriptors
     const Mat& descriptors1, const Mat& descriptors2) {
-    RCLCPP_INFO(rclcpp::get_logger("FeatureExtraction"), "Matching Features...");
+    // RCLCPP_INFO(rclcpp::get_logger("FeatureExtraction"), "Matching Features...");
     if (descriptors1.empty() || descriptors2.empty()) {
         RCLCPP_WARN(rclcpp::get_logger("FeatureExtraction"), "FLANN Matching: One or both descriptor matrices are empty!");
         return {};  // Return empty vector

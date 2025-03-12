@@ -29,6 +29,7 @@ namespace camera_utils {
 struct Keyframe {
     std::vector<cv::KeyPoint> keypoints;
     cv::Mat descriptors;
+    karto::Pose2 estimated_robot_pose; 
 };
 
 // // ======================== Camera Metadata ============================

@@ -9,6 +9,7 @@
 #include <tf2_ros/transform_listener.h>
 #include <tf2_ros/buffer.h>
 #include <tf2_geometry_msgs/tf2_geometry_msgs.hpp>
+#include <karto_sdk/Karto.h>
 
 #include "slam_toolbox/camera_utils.hpp"
 #include "slam_toolbox/ORBextractor.h"
@@ -18,6 +19,8 @@ class CameraFeatureExtractionNode : public rclcpp::Node {
 public:
     CameraFeatureExtractionNode(std::shared_ptr<camera_utils::KeyframeHolder> keyframe_holder);
     std::shared_ptr<camera_utils::FeatureExtraction> feature_extractor_; 
+    karto::Pose2 getRobotPose();
+    karto::Pose2 previous_keyframe_pose_;
 private:
     rclcpp::Subscription<sensor_msgs::msg::Image>::SharedPtr image_sub_;
     rclcpp::Publisher<sensor_msgs::msg::Image>::SharedPtr orb_feature_pub_;

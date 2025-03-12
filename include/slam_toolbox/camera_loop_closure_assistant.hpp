@@ -42,9 +42,7 @@ public:
 
     // void publishGraph();
     void setMapper(karto::Mapper * mapper);
-    /**
-     * Callback for manual loop closure detection (Service)
-     */
+    void publishGraph();
     bool manualLoopClosureCallback(
         const std::shared_ptr<rmw_request_id_t> request_header,
         const std::shared_ptr<std_srvs::srv::Trigger::Request> req,
