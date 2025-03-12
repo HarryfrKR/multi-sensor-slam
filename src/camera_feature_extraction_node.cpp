@@ -22,27 +22,9 @@ CameraFeatureExtractionNode::CameraFeatureExtractionNode(
 
     RCLCPP_INFO(this->get_logger(), "Initializing Camera Feature Extraction Node...");
 
-    try {
-        feature_extractor_ = std::make_shared<camera_utils::FeatureExtraction>();
-        if (!feature_extractor_) {
-            throw std::runtime_error("Feature extractor failed to initialize.");
-        }
-
-        RCLCPP_INFO(this->get_logger(), "Feature extractor and image holder initialized.");
-    } catch (const std::exception &e) {
-        RCLCPP_ERROR(this->get_logger(), "Exception during initialization: %s", e.what());
-        rclcpp::shutdown();
-        return;
-    }
-
+    feature_extractor_ = std::make_shared<camera_utils::FeatureExtraction>();
     tf_buffer_ = std::make_shared<tf2_ros::Buffer>(this->get_clock());
     tf_listener_ = std::make_shared<tf2_ros::TransformListener>(*tf_buffer_, this);
-
-    if (!tf_buffer_ || !tf_listener_) {
-        RCLCPP_ERROR(this->get_logger(), "Failed to initialize TF2 components.");
-        rclcpp::shutdown();
-        return;
-    }
 
     last_image_msg_ = nullptr;
     image_sub_ = this->create_subscription<sensor_msgs::msg::Image>(
@@ -55,7 +37,6 @@ CameraFeatureExtractionNode::CameraFeatureExtractionNode(
         "/slam_toolbox/orb_features", 10);
 
 }
-
 
 void CameraFeatureExtractionNode::imageCallback(const sensor_msgs::msg::Image::SharedPtr msg) {
     if (!msg || msg->data.empty()) {
@@ -83,15 +64,16 @@ void CameraFeatureExtractionNode::imageCallback(const sensor_msgs::msg::Image::S
         return;
     }
 
-    auto [keypoints, descriptors] = extractFeatures(gray_image);
+    // auto [keypoints, descriptors] = extractFeatures(gray_image);
     std::tie(keypoints_, descriptors_) = extractFeatures(gray_image);
-    publishKeypoints(keypoints, cv_ptr->image);
+    //keypoints_ready.store(true);
+    publishKeypoints(keypoints_, cv_ptr->image);
     
 }
 
 void CameraFeatureExtractionNode::processKeyframe() {
     if (!last_image_msg_ || keypoints_.empty() || descriptors_.empty()) {
-        RCLCPP_WARN(this->get_logger(), "Waiting for Image msg...");
+        // RCLCPP_WARN(this->get_logger(), "Waiting for Image msg...");
         return;
     }
 
@@ -118,7 +100,7 @@ bool CameraFeatureExtractionNode::isKeyframe(const std::vector<cv::KeyPoint>& ke
         // First frame is always stored as a keyframe
         Keyframe new_keyframe{keypoints, descriptors.clone()};
         keyframe_holder_->addKeyframe(new_keyframe);
-        RCLCPP_INFO(this->get_logger(), "First frame - Saving as keyframe.");
+        RCLCPP_INFO(this->get_logger(), "First frame - Saving as keyframe with %lu keypoints", new_keyframe.keypoints.size());
         return true;
     }
 

@@ -82,9 +82,9 @@ public:
                                                         const std::vector<cv::KeyPoint>& keypoints1, 
                                                         const std::vector<cv::KeyPoint>& keypoints2);
     bool computeRelativePose(const std::vector<cv::DMatch>& matches, 
-        const std::vector<cv::KeyPoint>& keypoints1, 
-        const std::vector<cv::KeyPoint>& keypoints2, 
-        karto::Pose2 &visualPose);
+                            const std::vector<cv::KeyPoint>& keypoints1, 
+                            const std::vector<cv::KeyPoint>& keypoints2, 
+                            karto::Pose2 &visualPose);
 
 private:
     std::shared_ptr<orb::ORBextractor> orb_extractor_;  // orb namespace is defined in ORBextractor.h

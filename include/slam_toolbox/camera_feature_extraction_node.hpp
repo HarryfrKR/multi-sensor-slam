@@ -17,13 +17,12 @@
 class CameraFeatureExtractionNode : public rclcpp::Node {
 public:
     CameraFeatureExtractionNode(std::shared_ptr<camera_utils::KeyframeHolder> keyframe_holder);
-
+    std::shared_ptr<camera_utils::FeatureExtraction> feature_extractor_; 
 private:
     rclcpp::Subscription<sensor_msgs::msg::Image>::SharedPtr image_sub_;
     rclcpp::Publisher<sensor_msgs::msg::Image>::SharedPtr orb_feature_pub_;
     rclcpp::TimerBase::SharedPtr keyframe_timer_;
 
-    std::shared_ptr<camera_utils::FeatureExtraction> feature_extractor_; 
     std::shared_ptr<camera_utils::KeyframeHolder> keyframe_holder_; 
     std::shared_ptr<tf2_ros::Buffer> tf_buffer_;
     std::shared_ptr<tf2_ros::TransformListener> tf_listener_;
