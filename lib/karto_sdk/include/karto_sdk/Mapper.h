@@ -150,12 +150,15 @@ public:
    * @param rCovariance
    * @param is_from_camera
    */
-  LinkInfo()
+  kt_bool is_from_camera;
+
+  LinkInfo() : is_from_camera(false)
   {
   }
-  LinkInfo(const Pose2 & rPose1, const Pose2 & rPose2, const Matrix3 & rCovariance, bool is_from_camera = false)
+  LinkInfo(const Pose2 & rPose1, const Pose2 & rPose2, const Matrix3 & rCovariance, bool from_camera = false)
+  : is_from_camera(from_camera) 
   {
-    Update(rPose1, rPose2, rCovariance, is_from_camera);
+    Update(rPose1, rPose2, rCovariance, from_camera);
   }
 
   /**
@@ -173,10 +176,11 @@ public:
    * @param rCovariance
    * @param is_from_camera
    */
-  void Update(const Pose2 & rPose1, const Pose2 & rPose2, const Matrix3 & rCovariance, bool is_from_camera)
+  void Update(const Pose2 & rPose1, const Pose2 & rPose2, const Matrix3 & rCovariance, bool from_camera)
   {
     m_Pose1 = rPose1;
     m_Pose2 = rPose2;
+    is_from_camera = from_camera;
 
     // transform second pose into the coordinate system of the first pose
     Transform transform(rPose1, Pose2());

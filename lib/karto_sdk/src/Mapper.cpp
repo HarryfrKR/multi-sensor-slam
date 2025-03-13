@@ -1878,7 +1878,7 @@ Vertex<LocalizedRangeScan> * MapperGraph::FindNearByScan(Name name, const Pose2 
 {
   VertexMap vertexMap = GetVertices();
   std::map<int, Vertex<LocalizedRangeScan> *> & vertices = vertexMap[name];
-
+  // std::cout << "Total vertices in graph: " << vertexMap[name].size() << std::endl;
   std::vector<Vertex<LocalizedRangeScan> *> vertices_to_search;
   std::map<int, Vertex<LocalizedRangeScan> *>::iterator it;
   for (it = vertices.begin(); it != vertices.end(); ++it) {
@@ -1903,7 +1903,7 @@ Vertex<LocalizedRangeScan> * MapperGraph::FindNearByScan(Name name, const Pose2 
   std::vector<double> out_dist_sqr(num_results);
   const double query_pt[2] = {refPose.GetX(), refPose.GetY()};
   num_results = index.knnSearch(&query_pt[0], num_results, &ret_index[0], &out_dist_sqr[0]);
-
+  // std::cout << "KD-Tree Search: Pose(" << query_pt[0] << ", " << query_pt[1]  << ") → Found " << num_results << " scans." << std::endl;
   if (num_results > 0) {
     return vertices_to_search[ret_index[0]];
   } else {
@@ -2023,13 +2023,13 @@ void MapperGraph::CorrectPoses()
         continue;
       }
       const karto::Pose2& correctedPose = iter->second; 
+      double camera_correction_scale = 0.8;          // correction scaling for camera-based constraints
 
       if (scan->IsCameraConstraint()) {
-          // Adjust correction scaling for camera-based constraints
           Pose2 adjustedPose(
-              correctedPose.GetX() * 0.8,  
-              correctedPose.GetY() * 0.8,    
-              correctedPose.GetHeading() * 0.8 
+              correctedPose.GetX() * camera_correction_scale ,  
+              correctedPose.GetY() * camera_correction_scale,    
+              correctedPose.GetHeading() * camera_correction_scale 
           );
           scan->SetCorrectedPoseAndUpdate(adjustedPose);
       } else {

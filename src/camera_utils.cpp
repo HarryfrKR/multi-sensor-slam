@@ -87,7 +87,7 @@ vector<DMatch> FeatureExtraction::matchFeatures(
     const Mat& descriptors1, const Mat& descriptors2) {
     // RCLCPP_INFO(rclcpp::get_logger("FeatureExtraction"), "Matching Features...");
     if (descriptors1.empty() || descriptors2.empty()) {
-        RCLCPP_WARN(rclcpp::get_logger("FeatureExtraction"), "FLANN Matching: One or both descriptor matrices are empty!");
+        RCLCPP_WARN(rclcpp::get_logger("FeatureExtraction"), "BFMatcher: One or both descriptor matrices are empty!");
         return {};  // Return empty vector
     }
     

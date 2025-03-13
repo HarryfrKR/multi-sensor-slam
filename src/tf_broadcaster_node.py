@@ -21,7 +21,7 @@ class StaticTFBroadcaster(Node):
         t1.header.stamp = self.get_clock().now().to_msg()
         t1.header.frame_id = "base_link"
         t1.child_frame_id = "laser"
-        t1.transform.translation.x = -0.00925  # -9.25mm
+        t1.transform.translation.x = -0.009  # -9.00mm
         t1.transform.translation.y = 0.0
         t1.transform.translation.z = 0.05       # 500mm
         t1.transform.rotation.x = 0.0
@@ -36,7 +36,7 @@ class StaticTFBroadcaster(Node):
         t2.child_frame_id = "camera_link"
         t2.transform.translation.x = -0.011  # -11mm
         t2.transform.translation.y = 0.0
-        t2.transform.translation.z = 0.045    # 450mm
+        t2.transform.translation.z = 0.040    # 400mm
         t2.transform.rotation.x = 0.0
         t2.transform.rotation.y = 0.0
         t2.transform.rotation.z = 0.0
