@@ -44,7 +44,7 @@ CameraLoopClosureAssistant::CameraLoopClosureAssistant(
 
     // Start automatic loop closure detection timer (Runs every 5 seconds)
     loop_closure_timer_ = node_->create_wall_timer(
-        std::chrono::seconds(10),
+        std::chrono::seconds(5),
         std::bind(&CameraLoopClosureAssistant::automaticLoopClosure, this)
     );
 
@@ -215,7 +215,7 @@ bool CameraLoopClosureAssistant::manualLoopClosureCallback(
 
     int best_match_index = -1;
     int max_matches = 10;
-    int matchThreshold = 80;
+    int matchThreshold = 40;
     vector<DMatch> best_matches;
 
     // Search for the best matching past keyframe
@@ -230,8 +230,6 @@ bool CameraLoopClosureAssistant::manualLoopClosureCallback(
         const auto& past_keyframe = keyframe_holder_->getKeyframe(i);
         const std::vector<KeyPoint>& keypoints2 = past_keyframe.keypoints;
         const Mat& descriptors2 = past_keyframe.descriptors;
-
-        RCLCPP_INFO(node_->get_logger(), "Comparing keyframe %zu (current) with keyframe %zu (past)", num_keyframes - 1, i);
 
         // Use BruteForce Matcher since ORB binary string descriptors
         vector<DMatch> matches = feature_extractor_->matchFeatures(descriptors1, descriptors2);
@@ -248,7 +246,7 @@ bool CameraLoopClosureAssistant::manualLoopClosureCallback(
     // RCLCPP_INFO(node_->get_logger(), "Best match index: %d, Matches: %d", best_match_index, max_matches);
 
     if (best_match_index == -1 || max_matches < matchThreshold) {
-        RCLCPP_WARN(node_->get_logger(), "No good keyframe match found for loop closure. (Best match: %d)", max_matches);
+        RCLCPP_WARN(node_->get_logger(), "No good keyframe match found for loop closure. (Threshold %dd : Best match: %d)", matchThreshold, max_matches);
         resp->success = false;
         resp->message = "No loop closure detected.";
         return false;
@@ -261,7 +259,7 @@ bool CameraLoopClosureAssistant::manualLoopClosureCallback(
     const Mat& descriptors_best = matched_keyframe.descriptors;
 
     vector<DMatch> good_matches;
-    double hamming_threshold = 30; 
+    double hamming_threshold = 50; 
 
     // if Hamming dist low, goot match
     for (const auto& match : best_matches) {
@@ -307,9 +305,8 @@ bool CameraLoopClosureAssistant::manualLoopClosureCallback(
             Matrix3 visualCovariance;
             visualCovariance.SetToIdentity();  
             
-            // Link camera constraint in the pose graph
-            // mapper_->GetGraph()->LinkScans(sourceScan, targetScan, visualPose, visualCovariance, true);
-
+            mapper_->GetGraph()->ProcessLinkScans(sourceScan, targetScan, visualPose, visualCovariance, true);
+            // mapper_->GetGraph()->CorrectPoses();
             RCLCPP_INFO(node_->get_logger(), "Loop closure successfully executed!");
 
             resp->success = true;

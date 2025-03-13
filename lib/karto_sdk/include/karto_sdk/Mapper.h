@@ -148,13 +148,14 @@ public:
    * @param rPose1
    * @param rPose2
    * @param rCovariance
+   * @param is_from_camera
    */
   LinkInfo()
   {
   }
-  LinkInfo(const Pose2 & rPose1, const Pose2 & rPose2, const Matrix3 & rCovariance)
+  LinkInfo(const Pose2 & rPose1, const Pose2 & rPose2, const Matrix3 & rCovariance, bool is_from_camera = false)
   {
-    Update(rPose1, rPose2, rCovariance);
+    Update(rPose1, rPose2, rCovariance, is_from_camera);
   }
 
   /**
@@ -170,8 +171,9 @@ public:
    * @param rPose1
    * @param rPose2
    * @param rCovariance
+   * @param is_from_camera
    */
-  void Update(const Pose2 & rPose1, const Pose2 & rPose2, const Matrix3 & rCovariance)
+  void Update(const Pose2 & rPose1, const Pose2 & rPose2, const Matrix3 & rCovariance, bool is_from_camera)
   {
     m_Pose1 = rPose1;
     m_Pose2 = rPose2;
@@ -222,12 +224,21 @@ public:
   {
     return m_Covariance;
   }
+    /**
+   * Checks if this link is from a camera-based loop closure
+   * @return True if this is a camera constraint, False otherwise
+   */
+  inline bool IsCameraConstraint() const
+  {
+    return is_camera_constraint_;
+  }
 
 private:
   Pose2 m_Pose1;
   Pose2 m_Pose2;
   Pose2 m_PoseDifference;
   Matrix3 m_Covariance;
+  bool is_camera_constraint_;
 
   friend class boost::serialization::access;
   template<class Archive>
@@ -238,6 +249,7 @@ private:
     ar & BOOST_SERIALIZATION_NVP(m_Pose2);
     ar & BOOST_SERIALIZATION_NVP(m_PoseDifference);
     ar & BOOST_SERIALIZATION_NVP(m_Covariance);
+    ar & BOOST_SERIALIZATION_NVP(is_camera_constraint_); 
   }
 };    // LinkInfo
 
@@ -724,6 +736,11 @@ public:
   virtual ~MapperGraph();
 
 public:
+
+  void ProcessLinkScans(LocalizedRangeScan* pScan1, LocalizedRangeScan* pScan2, 
+    const Pose2& relativePose, const Matrix3& covariance, bool is_from_camera) {
+     LinkScans(pScan1, pScan2, relativePose, covariance, is_from_camera);
+  }
   /**
    * Adds a vertex representing the given scan to the graph
    * @param pScan
@@ -855,7 +872,8 @@ private:
     LocalizedRangeScan * pFromScan,
     LocalizedRangeScan * pToScan,
     const Pose2 & rMean,
-    const Matrix3 & rCovariance);
+    const Matrix3 & rCovariance,
+    bool is_from_camera = false);
 
   /**
    * Find nearby chains of scans and link them to scan if response is high enough

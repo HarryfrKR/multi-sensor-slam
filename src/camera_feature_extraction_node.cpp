@@ -101,7 +101,6 @@ bool CameraFeatureExtractionNode::isKeyframe(const std::vector<cv::KeyPoint>& ke
     Pose2 estimatedPose = getRobotPose();
     
     if (keyframe_holder_->size() == 0) {
-        // First frame is always stored as a keyframe
         previous_keyframe_pose_ = estimatedPose; 
         Keyframe new_keyframe{keypoints, descriptors.clone(), estimatedPose};
         keyframe_holder_->addKeyframe(new_keyframe);

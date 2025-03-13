@@ -1618,7 +1618,7 @@ Edge<LocalizedRangeScan> * MapperGraph::AddEdge(
 
 void MapperGraph::LinkScans(
   LocalizedRangeScan * pFromScan, LocalizedRangeScan * pToScan,
-  const Pose2 & rMean, const Matrix3 & rCovariance)
+  const Pose2 & rMean, const Matrix3 & rCovariance, bool is_from_camera)
 {
   kt_bool isNewEdge = true;
   Edge<LocalizedRangeScan> * pEdge = AddEdge(pFromScan, pToScan, isNewEdge);
@@ -1629,7 +1629,7 @@ void MapperGraph::LinkScans(
 
   // only attach link information if the edge is new
   if (isNewEdge == true) {
-    pEdge->SetLabel(new LinkInfo(pFromScan->GetCorrectedPose(), pToScan->GetCorrectedAt(rMean), rCovariance));
+    pEdge->SetLabel(new LinkInfo(pFromScan->GetCorrectedPose(), pToScan->GetCorrectedAt(rMean), rCovariance, is_from_camera));
     if (m_pMapper->m_pScanOptimizer != NULL) {
       m_pMapper->m_pScanOptimizer->AddConstraint(pEdge);
     }
@@ -2022,7 +2022,19 @@ void MapperGraph::CorrectPoses()
       if (scan == NULL) {
         continue;
       }
-      scan->SetCorrectedPoseAndUpdate(iter->second);
+      const karto::Pose2& correctedPose = iter->second; 
+
+      if (scan->IsCameraConstraint()) {
+          // Adjust correction scaling for camera-based constraints
+          Pose2 adjustedPose(
+              correctedPose.GetX() * 0.8,  
+              correctedPose.GetY() * 0.8,    
+              correctedPose.GetHeading() * 0.8 
+          );
+          scan->SetCorrectedPoseAndUpdate(adjustedPose);
+      } else {
+          scan->SetCorrectedPoseAndUpdate(correctedPose);
+      }
     }
 
     pSolver->Clear();

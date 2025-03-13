@@ -43,7 +43,7 @@ void KeyframeHolder::clear() {
 
 FeatureExtraction::FeatureExtraction() {
     try {
-        int nFeatures = 100;
+        int nFeatures = 120;
         float scaleFactor = 1.2f;
         int nLevels = 8;
         int iniThFAST = 30;

@@ -5413,6 +5413,7 @@ class LocalizedRangeScan : public LaserRangeScan
 public:
   // @cond EXCLUDE
   KARTO_Object(LocalizedRangeScan)
+  kt_bool is_from_camera_; 
   // @endcond
 
 public:
@@ -5421,11 +5422,13 @@ public:
    */
   LocalizedRangeScan(const Name & rSensorName, const RangeReadingsVector & rReadings)
   : LaserRangeScan(rSensorName, rReadings),
+    is_from_camera_(false),
     m_IsDirty(true)
   {
   }
 
   LocalizedRangeScan()
+  : is_from_camera_(false)
   {}
 
   /**
@@ -5439,6 +5442,15 @@ private:
   mutable std::shared_mutex m_Lock;
 
 public:
+  inline void SetCameraConstraint(bool is_camera) 
+  { 
+    is_from_camera_ = is_camera; 
+  }
+
+  inline bool IsCameraConstraint() const 
+  { 
+    return is_from_camera_; 
+  }
   /**
    * Gets the odometric pose of this scan
    * @return odometric pose of this scan
