@@ -227,7 +227,7 @@ void LoopClosureAssistant::publishGraph()
   localization_edges_marker.pose.orientation.w = 1;
   localization_edges_marker.scale.x = 0.05;
   localization_edges_marker.color.g = 1;
-  localization_edges_marker.color.b = 1; // Cyan line localization edges
+  localization_edges_marker.color.b = 0; // Red line localization edges
   localization_edges_marker.color.a = 1;
   localization_edges_marker.lifetime = rclcpp::Duration::from_seconds(0);
   localization_edges_marker.points.reserve(localization_vertices.size() * 3);
@@ -241,7 +241,8 @@ void LoopClosureAssistant::publishGraph()
   camera_edges_marker.type = visualization_msgs::msg::Marker::LINE_LIST;
   camera_edges_marker.pose.orientation.w = 1;
   camera_edges_marker.scale.x = 0.05;
-  camera_edges_marker.color.r = 1; // Red line for camera-based loop closures
+  camera_edges_marker.color.r = 1; 
+  camera_edges_marker.color.b = 1; // Cyan line camera-based loop closures
   camera_edges_marker.color.a = 1;
   camera_edges_marker.lifetime = rclcpp::Duration::from_seconds(0);
   camera_edges_marker.points.reserve(edges.size() * 2);
@@ -273,8 +274,10 @@ void LoopClosureAssistant::publishGraph()
       localization_edges_marker.points.push_back(p1);
     }
   }
-
-  marray.markers.push_back(edges_marker);
+  if (camera_edges_marker.points.empty()) {
+    RCLCPP_WARN(node_->get_logger(), "No camera-based loop closures detected!");
+}
+  //marray.markers.push_back(edges_marker);
   marray.markers.push_back(localization_edges_marker);
   marray.markers.push_back(camera_edges_marker); 
 

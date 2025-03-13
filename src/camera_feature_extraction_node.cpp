@@ -123,8 +123,8 @@ bool CameraFeatureExtractionNode::isKeyframe(const std::vector<cv::KeyPoint>& ke
         feature_extractor_->computeRelativePose(matches, keypoints, last_kf.keypoints, relativePose);
 
         // Define motion thresholds
-        double translation_threshold = 0.3;  // 30 cm
-        double rotation_threshold = 0.15;    // ~8.5 degrees
+        double translation_threshold = 0.1;  // cm
+        double rotation_threshold = 0.05;    // rad
 
         // Compute pose difference from last saved keyframe
         double dx = estimatedPose.GetX() - previous_keyframe_pose_.GetX();
@@ -138,11 +138,11 @@ bool CameraFeatureExtractionNode::isKeyframe(const std::vector<cv::KeyPoint>& ke
             previous_keyframe_pose_ = estimatedPose; 
             Keyframe new_keyframe{keypoints, descriptors.clone(), estimatedPose};
             keyframe_holder_->addKeyframe(new_keyframe);
-            RCLCPP_INFO(this->get_logger(), "Added new keyframe with estimated pose (%.2f, %.2f, %.2f)",
-                        estimatedPose.GetX(), estimatedPose.GetY(), estimatedPose.GetHeading());
+            // RCLCPP_INFO(this->get_logger(), "Added new keyframe with estimated pose (%.2f, %.2f, %.2f)",
+            //             estimatedPose.GetX(), estimatedPose.GetY(), estimatedPose.GetHeading());
             return true;
         } else {
-            RCLCPP_INFO(this->get_logger(), "No significant motion detected. Skipping keyframe.");
+            //RCLCPP_INFO(this->get_logger(), "No significant motion detected. Skipping keyframe.");
             return false;
         }
 

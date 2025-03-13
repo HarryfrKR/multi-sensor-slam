@@ -51,7 +51,7 @@ public:
 
 private:
     void automaticLoopClosure();
-    
+    int camera_loop_closure_cnt ;
     std::vector<std::unique_ptr<boost::thread>> threads_;
     rclcpp::Node::SharedPtr node_; 
     karto::Mapper *mapper_;
@@ -63,6 +63,8 @@ private:
     rclcpp::Publisher<visualization_msgs::msg::MarkerArray>::SharedPtr marker_publisher_;
     rclcpp::Service<std_srvs::srv::Trigger>::SharedPtr ssLoopClosure_;
     rclcpp::TimerBase::SharedPtr loop_closure_timer_; 
+    std::shared_ptr<tf2_ros::Buffer> tf_buffer_;
+    std::shared_ptr<tf2_ros::TransformListener> tf_listener_;
 
     std::string map_frame_;
 };

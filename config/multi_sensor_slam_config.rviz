@@ -7,8 +7,11 @@ Panels:
         - /Global Options1
         - /Status1
         - /Image1/Topic1
+        - /Odometry1
+        - /Odometry1/Topic1
+        - /Odometry1/Shape1
       Splitter Ratio: 0.5
-    Tree Height: 739
+    Tree Height: 760
   - Class: rviz_common/Selection
     Name: Selection
   - Class: rviz_common/Tool Properties
@@ -63,9 +66,9 @@ Visualization Manager:
       Enabled: true
       Invert Rainbow: false
       Max Color: 255; 255; 255
-      Max Intensity: 53
+      Max Intensity: 47
       Min Color: 0; 0; 0
-      Min Intensity: 0
+      Min Intensity: 1
       Name: LaserScan
       Position Transformer: XYZ
       Selectable: true
@@ -91,6 +94,22 @@ Visualization Manager:
           Value: false
         base_link:
           Value: true
+        bump_front_center:
+          Value: true
+        bump_front_left:
+          Value: true
+        bump_front_right:
+          Value: true
+        bump_left:
+          Value: true
+        bump_right:
+          Value: true
+        button_1:
+          Value: true
+        button_2:
+          Value: true
+        button_power:
+          Value: true
         camera_color_frame:
           Value: false
         camera_color_optical_frame:
@@ -101,11 +120,43 @@ Visualization Manager:
           Value: false
         camera_link:
           Value: false
+        cliff_front_left:
+          Value: true
+        cliff_front_right:
+          Value: true
+        cliff_side_left:
+          Value: true
+        cliff_side_right:
+          Value: true
+        imu:
+          Value: true
+        ir_intensity_front_center_left:
+          Value: true
+        ir_intensity_front_center_right:
+          Value: true
+        ir_intensity_front_left:
+          Value: true
+        ir_intensity_front_right:
+          Value: true
+        ir_intensity_left:
+          Value: true
+        ir_intensity_right:
+          Value: true
+        ir_intensity_side_left:
+          Value: true
+        ir_omni:
+          Value: true
         laser:
+          Value: true
+        left_wheel:
           Value: true
         map:
           Value: true
+        mouse:
+          Value: true
         odom:
+          Value: true
+        right_wheel:
           Value: true
       Marker Scale: 1
       Name: TF
@@ -114,19 +165,68 @@ Visualization Manager:
       Show Names: true
       Tree:
         map:
-          odom:
-            base_footprint:
+          {}
+        odom:
+          base_footprint:
+            {}
+          base_link:
+            bump_front_center:
               {}
-            base_link:
-              camera_link:
-                camera_color_frame:
-                  camera_color_optical_frame:
-                    {}
-                camera_depth_frame:
-                  camera_depth_optical_frame:
-                    {}
-              laser:
-                {}
+            bump_front_left:
+              {}
+            bump_front_right:
+              {}
+            bump_left:
+              {}
+            bump_right:
+              {}
+            button_1:
+              {}
+            button_2:
+              {}
+            button_power:
+              {}
+            camera_link:
+              camera_color_frame:
+                camera_color_optical_frame:
+                  {}
+              camera_depth_frame:
+                camera_depth_optical_frame:
+                  {}
+            cliff_front_left:
+              {}
+            cliff_front_right:
+              {}
+            cliff_side_left:
+              {}
+            cliff_side_right:
+              {}
+            imu:
+              {}
+            ir_intensity_front_center_left:
+              {}
+            ir_intensity_front_center_right:
+              {}
+            ir_intensity_front_left:
+              {}
+            ir_intensity_front_right:
+              {}
+            ir_intensity_left:
+              {}
+            ir_intensity_right:
+              {}
+            ir_intensity_side_left:
+              {}
+            ir_omni:
+              {}
+            laser:
+              {}
+            left_wheel:
+              {}
+            mouse:
+              {}
+            right_wheel:
+              {}
       Update Interval: 0
       Value: true
     - Alpha: 0.699999988079071
@@ -182,13 +282,54 @@ Visualization Manager:
       Enabled: true
       Name: MarkerArray
       Namespaces:
-        {}
+        slam_toolbox: true
+        slam_toolbox_camera_edges: true
+        slam_toolbox_edges: true
       Topic:
         Depth: 5
         Durability Policy: Volatile
         History Policy: Keep Last
         Reliability Policy: Reliable
         Value: /slam_toolbox/graph_visualization
+      Value: true
+    - Angle Tolerance: 0.20000000298023224
+      Class: rviz_default_plugins/Odometry
+      Covariance:
+        Orientation:
+          Alpha: 0.5
+          Color: 255; 255; 127
+          Color Style: Unique
+          Frame: Local
+          Offset: 1
+          Scale: 1
+          Value: true
+        Position:
+          Alpha: 0.30000001192092896
+          Color: 204; 51; 204
+          Scale: 1
+          Value: true
+        Value: true
+      Enabled: true
+      Keep: 1000
+      Name: Odometry
+      Position Tolerance: 0.20000000298023224
+      Shape:
+        Alpha: 1
+        Axes Length: 1
+        Axes Radius: 0.10000000149011612
+        Color: 255; 25; 0
+        Head Length: 0.10000000149011612
+        Head Radius: 0.05000000074505806
+        Shaft Length: 0.10000000149011612
+        Shaft Radius: 0.029999999329447746
+        Value: Arrow
+      Topic:
+        Depth: 5
+        Durability Policy: Volatile
+        Filter size: 10
+        History Policy: Keep Last
+        Reliability Policy: Best Effort
+        Value: /odom
       Value: true
   Enabled: true
   Global Options:
@@ -236,35 +377,35 @@ Visualization Manager:
   Views:
     Current:
       Class: rviz_default_plugins/Orbit
-      Distance: 20.815017700195312
+      Distance: 13.413597106933594
       Enable Stereo Rendering:
         Stereo Eye Separation: 0.05999999865889549
         Stereo Focal Distance: 1
         Swap Stereo Eyes: false
         Value: false
       Focal Point:
-        X: 1.5515023469924927
-        Y: 0.0955253466963768
-        Z: 0.3128542900085449
+        X: 3.3416218757629395
+        Y: -1.513007402420044
+        Z: 0.9225881099700928
       Focal Shape Fixed Size: true
       Focal Shape Size: 0.05000000074505806
       Invert Z Axis: false
       Name: Current View
       Near Clip Distance: 0.009999999776482582
-      Pitch: 1.1597963571548462
+      Pitch: 1.3697965145111084
       Target Frame: <Fixed Frame>
       Value: Orbit (rviz)
-      Yaw: 4.665395736694336
+      Yaw: 4.895396709442139
     Saved: ~
 Window Geometry:
   Displays:
     collapsed: false
-  Height: 1022
+  Height: 1043
   Hide Left Dock: false
   Hide Right Dock: false
   Image:
     collapsed: false
-  QMainWindow State: 000000ff00000000fd00000004000000000000020a00000364fc0200000009fb0000001200530065006c0065006300740069006f006e00000001e10000009b0000005c00fffffffb0000001e0054006f006f006c002000500072006f007000650072007400690065007302000001ed000001df00000185000000a3fb000000120056006900650077007300200054006f006f02000001df000002110000018500000122fb000000200054006f006f006c002000500072006f0070006500720074006900650073003203000002880000011d000002210000017afb000000100044006900730070006c006100790073010000003b00000364000000c700fffffffb0000002000730065006c0065006300740069006f006e00200062007500660066006500720200000138000000aa0000023a00000294fb00000014005700690064006500530074006500720065006f02000000e6000000d2000003ee0000030bfb0000000c004b0069006e0065006300740200000186000001060000030c00000261fb0000000c00430061006d006500720061010000026b000001d30000000000000000000000010000025400000364fc0200000005fb0000001e0054006f006f006c002000500072006f00700065007200740069006500730100000041000000780000000000000000fc0000003b00000162000000a000fffffffa000000010100000002fb0000000a0049006d0061006700650000000000ffffffff0000005a00fffffffb0000000a0056006900650077007301000007330000010f0000010000fffffffb0000000a0049006d00610067006501000001a3000001fc0000002800fffffffb0000000a0049006d0061006700650100000302000001840000000000000000fb0000001200530065006c0065006300740069006f006e010000025a000000b200000000000000000000000200000490000000a9fc0100000001fb0000000a00560069006500770073030000004e00000080000002e10000019700000003000009df0000003efc0100000002fb0000000800540069006d00650100000000000009df0000025300fffffffb0000000800540069006d00650100000000000004500000000000000000000005750000036400000004000000040000000800000008fc0000000100000002000000010000000a0054006f006f006c00730100000000ffffffff0000000000000000
+  QMainWindow State: 000000ff00000000fd00000004000000000000015600000379fc0200000009fb0000001200530065006c0065006300740069006f006e00000001e10000009b0000005c00fffffffb0000001e0054006f006f006c002000500072006f007000650072007400690065007302000001ed000001df00000185000000a3fb000000120056006900650077007300200054006f006f02000001df000002110000018500000122fb000000200054006f006f006c002000500072006f0070006500720074006900650073003203000002880000011d000002210000017afb000000100044006900730070006c006100790073010000003b00000379000000c700fffffffb0000002000730065006c0065006300740069006f006e00200062007500660066006500720200000138000000aa0000023a00000294fb00000014005700690064006500530074006500720065006f02000000e6000000d2000003ee0000030bfb0000000c004b0069006e0065006300740200000186000001060000030c00000261fb0000000c00430061006d006500720061010000026b000001d3000000000000000000000001000001bb00000379fc0200000005fb0000001e0054006f006f006c002000500072006f00700065007200740069006500730100000041000000780000000000000000fc0000003b0000023e000000a000fffffffa000000010100000002fb0000000a0049006d0061006700650000000000ffffffff0000005a00fffffffb0000000a0056006900650077007301000007330000010f0000010000fffffffb0000000a0049006d006100670065010000027f000001350000002800fffffffb0000000a0049006d0061006700650100000302000001840000000000000000fb0000001200530065006c0065006300740069006f006e010000025a000000b200000000000000000000000200000490000000a9fc0100000001fb0000000a00560069006500770073030000004e00000080000002e10000019700000003000007800000003efc0100000002fb0000000800540069006d00650100000000000007800000025300fffffffb0000000800540069006d00650100000000000004500000000000000000000004630000037900000004000000040000000800000008fc0000000100000002000000010000000a0054006f006f006c00730100000000ffffffff0000000000000000
   Selection:
     collapsed: false
   Time:
@@ -273,6 +414,6 @@ Window Geometry:
     collapsed: false
   Views:
     collapsed: false
-  Width: 2527
-  X: 491
-  Y: 554
+  Width: 1920
+  X: 1947
+  Y: 16

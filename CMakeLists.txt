@@ -35,6 +35,7 @@ find_package(rclcpp_components REQUIRED)
 find_package(OpenCV REQUIRED)
 find_package(PCL REQUIRED)
 find_package(cv_bridge REQUIRED)
+find_package(tf2_geometry_msgs REQUIRED)
 
 #karto_sdk lib
 set(BUILD_SHARED_LIBS ON)
@@ -205,7 +206,8 @@ target_link_libraries(camera_feature_extraction_node camera_utils ORBextractor k
 
 add_library(camera_loop_closure_assistant src/camera_loop_closure_assistant.cpp)
 ament_target_dependencies(camera_loop_closure_assistant ${dependencies})
-target_link_libraries(camera_loop_closure_assistant camera_utils ORBextractor kartoSlamToolbox ${OpenCV_LIBRARIES} ${cpp_typesupport_target})
+target_link_libraries(camera_loop_closure_assistant camera_utils ORBextractor kartoSlamToolbox  tf2::tf2
+tf2_geometry_msgs::tf2_geometry_msgs ${OpenCV_LIBRARIES} ${cpp_typesupport_target})
 #### testing
 #if(BUILD_TESTING)
 #  find_package(ament_cmake_gtest REQUIRED)

@@ -1500,7 +1500,6 @@ void MapperGraph::AddEdges(LocalizedRangeScan * pScan, const Matrix3 & rCovarian
 kt_bool MapperGraph::TryCloseLoop(LocalizedRangeScan * pScan, const Name & rSensorName)
 {
   kt_bool loopClosed = false;
-
   kt_int32u scanIndex = 0;
 
   LocalizedRangeScanVector candidateChain = FindPossibleLoopClosure(pScan, rSensorName, scanIndex);
@@ -2023,7 +2022,7 @@ void MapperGraph::CorrectPoses()
         continue;
       }
       const karto::Pose2& correctedPose = iter->second; 
-      double camera_correction_scale = 0.8;          // correction scaling for camera-based constraints
+      double camera_correction_scale = 1.0;          // correction scaling for camera-based constraints
 
       if (scan->IsCameraConstraint()) {
           Pose2 adjustedPose(

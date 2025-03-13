@@ -2,6 +2,7 @@
 #include <memory>
 
 #include <slam_toolbox/camera_loop_closure_assistant.hpp>
+#include "tf2_geometry_msgs/tf2_geometry_msgs.hpp"
 
 // #include <slam_toolbox/camera_utils.hpp>
 // #include <slam_toolbox/ORBextractor.h>
@@ -25,6 +26,8 @@ CameraLoopClosureAssistant::CameraLoopClosureAssistant(
 
     tfB_ = std::make_unique<tf2_ros::TransformBroadcaster>(node_);
     solver_ = mapper_->getScanSolver();
+    tf_buffer_ = std::make_shared<tf2_ros::Buffer>(node_->get_clock());
+    tf_listener_ = std::make_shared<tf2_ros::TransformListener>(*tf_buffer_, node_);
     
     auto camera_feature_extractor_= std::make_shared<CameraFeatureExtractionNode>(keyframe_holder_);
     ssLoopClosure_ = node_->create_service<std_srvs::srv::Trigger>(
@@ -60,14 +63,18 @@ bool CameraLoopClosureAssistant::transformPoseToLaserFrame(
   tf2::Transform tf_camera_to_laser_tf;
   tf_camera_to_laser_tf.setOrigin(tf2::Vector3(0.002, 0.0, 0.01));
   tf2::Quaternion q;
-  q.setRPY(0, 0, 0);  // No rotation
+  q.setRPY(0, 0, 3.142);  // No rotation
   tf_camera_to_laser_tf.setRotation(q);
 
-  // Convert pose from camera frame to laser frame
-  tf2::Transform tf_pose_camera;
-  tf_pose_camera.setOrigin(tf2::Vector3(pose_in_camera.GetX(), pose_in_camera.GetY(), 0.04));
-  q.setRPY(0, 0, pose_in_camera.GetHeading());
-  tf_pose_camera.setRotation(q);
+    tf2::Transform tf_pose_camera;
+    tf_pose_camera.setOrigin(tf2::Vector3(pose_in_camera.GetX(), pose_in_camera.GetY(), 0.00));
+    q.setRPY(0, 0, pose_in_camera.GetHeading());
+    tf_pose_camera.setRotation(q);
+
+//   tf2::Duration timeout = tf2::durationFromSec(2.0); 
+//   geometry_msgs::msg::TransformStamped transform = tf_buffer_->lookupTransform("laser", "camera_link", rclcpp::Time(0), timeout);
+//   tf2::doTransform(tf_pose_camera, tf_pose_laser, transform);
+
 
   // RCLCPP_INFO(node_->get_logger(), "Manual TF used: pose in camera (%.3f, %.3f, %.3f)", 
   //             tf_pose_camera.getOrigin().x(), 
@@ -80,7 +87,7 @@ bool CameraLoopClosureAssistant::transformPoseToLaserFrame(
 
   // Convert back to Pose2 format
   pose_in_laser = Pose2(tf_pose_laser.getOrigin().x(),
-                         tf_pose_laser.getOrigin().y(),
+                        tf_pose_laser.getOrigin().y(),
                          tf2::getYaw(tf_pose_laser.getRotation()));
 
   // RCLCPP_INFO(node_->get_logger(), "Manual TF used: pose in laser (%.3f, %.3f, %.3f)", 
@@ -124,8 +131,8 @@ bool CameraLoopClosureAssistant::manualLoopClosureCallback(
     const Mat& descriptors1 = candidate_keyframe.descriptors;
 
     int best_match_index = -1;
-    int max_matches = 10;
-    int matchThreshold = 40;
+    int max_matches = 1;
+    int matchThreshold = 10; // tune
     vector<DMatch> best_matches;
 
     // Search for the best matching past keyframe
@@ -196,7 +203,7 @@ bool CameraLoopClosureAssistant::manualLoopClosureCallback(
             Pose2 candidatePoseTransform, matchedPoseTransform;
             Pose2 candidatePose = candidate_keyframe.estimated_robot_pose;
             Pose2 matchedPose = matched_keyframe.estimated_robot_pose;
-          
+    
             transformPoseToLaserFrame(candidatePose, candidatePoseTransform);
             transformPoseToLaserFrame(matchedPose, matchedPoseTransform);
 
@@ -219,6 +226,8 @@ bool CameraLoopClosureAssistant::manualLoopClosureCallback(
             mapper_->GetGraph()->CorrectPoses();
 
             RCLCPP_INFO(node_->get_logger(), "Loop closure successfully executed!");
+            camera_loop_closure_cnt++;
+            RCLCPP_INFO(node_->get_logger(), "Camera loop closure count : %d", camera_loop_closure_cnt);
 
             resp->success = true;
             resp->message = "Loop closure detected and processed.";
