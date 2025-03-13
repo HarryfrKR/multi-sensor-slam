@@ -51,7 +51,7 @@ public:
 
 private:
     void automaticLoopClosure();
-    int camera_loop_closure_cnt ;
+    int camera_loop_closure_cnt = 0;
     std::vector<std::unique_ptr<boost::thread>> threads_;
     rclcpp::Node::SharedPtr node_; 
     karto::Mapper *mapper_;
