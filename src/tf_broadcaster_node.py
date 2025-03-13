@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
-
+import math
 import rclpy
 from rclpy.node import Node
 import tf2_ros
+from tf_transformations import quaternion_from_euler
 from geometry_msgs.msg import TransformStamped
 
 class StaticTFBroadcaster(Node):
@@ -16,6 +17,10 @@ class StaticTFBroadcaster(Node):
         self.publish_transforms()
 
     def publish_transforms(self):
+
+        q = quaternion_from_euler(0, 0, math.pi)
+        print(q)
+
         # RPLIDAR C1 -> base_link
         t1 = TransformStamped()
         t1.header.stamp = self.get_clock().now().to_msg()
@@ -24,10 +29,11 @@ class StaticTFBroadcaster(Node):
         t1.transform.translation.x = -0.009  # -9.00mm
         t1.transform.translation.y = 0.0
         t1.transform.translation.z = 0.05       # 500mm
-        t1.transform.rotation.x = 0.0
-        t1.transform.rotation.y = 0.0
-        t1.transform.rotation.z = 0.0
-        t1.transform.rotation.w = 1.0
+        t1.transform.rotation.x = q[0]
+        t1.transform.rotation.y = q[1]
+        t1.transform.rotation.z = q[2]
+        t1.transform.rotation.w = q[3]
+        
 
         # RealSense D435i -> base_link
         t2 = TransformStamped()
