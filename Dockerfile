@@ -62,7 +62,8 @@ RUN apt-get update && apt-get install -y \
     ros-humble-tf2 \
     ros-humble-tf2-ros \
     ros-humble-tf2-geometry-msgs \
-    ros-humble-ros2bag
+    ros-humble-ros2bag \
+    ros-humble-tf-transformations
 
 # Install Ignition Fortress Gazebo
 RUN curl https://packages.osrfoundation.org/gazebo.gpg --output /usr/share/keyrings/pkgs-osrf-archive-keyring.gpg
