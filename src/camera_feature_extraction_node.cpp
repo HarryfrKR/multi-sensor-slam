@@ -138,8 +138,8 @@ bool CameraFeatureExtractionNode::isKeyframe(const std::vector<cv::KeyPoint>& ke
             previous_keyframe_pose_ = estimatedPose; 
             Keyframe new_keyframe{keypoints, descriptors.clone(), estimatedPose};
             keyframe_holder_->addKeyframe(new_keyframe);
-            // RCLCPP_INFO(this->get_logger(), "Added new keyframe with estimated pose (%.2f, %.2f, %.2f)",
-            //             estimatedPose.GetX(), estimatedPose.GetY(), estimatedPose.GetHeading());
+            RCLCPP_INFO(this->get_logger(), "Added new keyframe with estimated pose (%.2f, %.2f, %.2f)",
+                        estimatedPose.GetX(), estimatedPose.GetY(), estimatedPose.GetHeading());
             return true;
         } else {
             //RCLCPP_INFO(this->get_logger(), "No significant motion detected. Skipping keyframe.");
@@ -189,7 +189,6 @@ karto::Pose2 CameraFeatureExtractionNode::getRobotPose() {
         transform.transform.rotation.w);
 
     double yaw = tf2::getYaw(quat);
-
     return karto::Pose2(transform.transform.translation.x, 
                         transform.transform.translation.y,
                         yaw);

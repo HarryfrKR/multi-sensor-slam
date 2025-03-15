@@ -56,48 +56,48 @@ void CameraLoopClosureAssistant::setMapper(karto::Mapper * mapper)
   mapper_ = mapper;
 }
 
-bool CameraLoopClosureAssistant::transformPoseToLaserFrame(
-  const Pose2& pose_in_camera, Pose2& pose_in_laser) {
+// bool CameraLoopClosureAssistant::transformPoseToLaserFrame(
+//   const Pose2& pose_in_camera, Pose2& pose_in_laser) {
 
-  // Manually defined transform from camera to laser (from calculations)
-  tf2::Transform tf_camera_to_laser_tf;
-  tf_camera_to_laser_tf.setOrigin(tf2::Vector3(0.002, 0.0, 0.01));
-  tf2::Quaternion q;
-  q.setRPY(0, 0, 3.142);  // No rotation
-  tf_camera_to_laser_tf.setRotation(q);
+// //   // Manually defined transform from camera to laser (from calculations)
+// //   tf2::Transform tf_camera_to_laser_tf;
+// //   tf_camera_to_laser_tf.setOrigin(tf2::Vector3(0.002, 0.0, 0.01));
+// //   q.setRPY(0, 0, 3.142);  // No rotation
+// //   tf_camera_to_laser_tf.setRotation(q);
 
-    tf2::Transform tf_pose_camera;
-    tf_pose_camera.setOrigin(tf2::Vector3(pose_in_camera.GetX(), pose_in_camera.GetY(), 0.00));
-    q.setRPY(0, 0, pose_in_camera.GetHeading());
-    tf_pose_camera.setRotation(q);
+//     //tf2::Transform tf_pose_camera;
+//     tf2::Quaternion q;
+//     pose_in_laser.setOrigin(tf2::Vector3(pose_in_camera.GetX()+0.002, pose_in_camera.GetY(), 0.01));
+//     q.setRPY(0, 0, pose_in_camera.GetHeading());
+//     pose_in_laser.setRotation(q);
 
-//   tf2::Duration timeout = tf2::durationFromSec(2.0); 
-//   geometry_msgs::msg::TransformStamped transform = tf_buffer_->lookupTransform("laser", "camera_link", rclcpp::Time(0), timeout);
-//   tf2::doTransform(tf_pose_camera, tf_pose_laser, transform);
+// //   tf2::Duration timeout = tf2::durationFromSec(2.0); 
+// //   geometry_msgs::msg::TransformStamped transform = tf_buffer_->lookupTransform("laser", "camera_link", rclcpp::Time(0), timeout);
+// //   tf2::doTransform(tf_pose_camera, tf_pose_laser, transform);
 
 
-  // RCLCPP_INFO(node_->get_logger(), "Manual TF used: pose in camera (%.3f, %.3f, %.3f)", 
-  //             tf_pose_camera.getOrigin().x(), 
-  //             tf_pose_camera.getOrigin().y(), 
-  //             tf_pose_camera.getOrigin().z());
+//   // RCLCPP_INFO(node_->get_logger(), "Manual TF used: pose in camera (%.3f, %.3f, %.3f)", 
+//   //             tf_pose_camera.getOrigin().x(), 
+//   //             tf_pose_camera.getOrigin().y(), 
+//   //             tf_pose_camera.getOrigin().z());
 
-  // Compute final pose in laser frame
-  tf2::Transform tf_pose_laser = tf_camera_to_laser_tf * tf_pose_camera;
+//   // Compute final pose in laser frame
+//   tf2::Transform tf_pose_laser = tf_camera_to_laser_tf * tf_pose_camera;
   
 
-  // Convert back to Pose2 format
-  pose_in_laser = Pose2(tf_pose_laser.getOrigin().x(),
-                        tf_pose_laser.getOrigin().y(),
-                         tf2::getYaw(tf_pose_laser.getRotation()));
+//   // Convert back to Pose2 format
+//   pose_in_laser = Pose2(tf_pose_laser.getOrigin().x(),
+//                         tf_pose_laser.getOrigin().y(),
+//                          tf2::getYaw(tf_pose_laser.getRotation()));
 
-  // RCLCPP_INFO(node_->get_logger(), "Manual TF used: pose in laser (%.3f, %.3f, %.3f)", 
-  //             tf_pose_laser.getOrigin().x(), 
-  //             tf_pose_laser.getOrigin().y(), 
-  //             tf_pose_laser.getOrigin().z());
+//   // RCLCPP_INFO(node_->get_logger(), "Manual TF used: pose in laser (%.3f, %.3f, %.3f)", 
+//   //             tf_pose_laser.getOrigin().x(), 
+//   //             tf_pose_laser.getOrigin().y(), 
+//   //             tf_pose_laser.getOrigin().z());
 
-  return true;
+//   return true;
 
-}
+// }
 
 void CameraLoopClosureAssistant::automaticLoopClosure() {
     std_srvs::srv::Trigger::Request::SharedPtr req = std::make_shared<std_srvs::srv::Trigger::Request>();
@@ -204,11 +204,11 @@ bool CameraLoopClosureAssistant::manualLoopClosureCallback(
             Pose2 candidatePose = candidate_keyframe.estimated_robot_pose;
             Pose2 matchedPose = matched_keyframe.estimated_robot_pose;
     
-            transformPoseToLaserFrame(candidatePose, candidatePoseTransform);
-            transformPoseToLaserFrame(matchedPose, matchedPoseTransform);
+            // transformPoseToLaserFrame(candidatePose, candidatePoseTransform);
+            // transformPoseToLaserFrame(matchedPose, matchedPoseTransform);
 
-            Vertex<LocalizedRangeScan>* sourceVertex = mapper_->GetGraph()->FindNearByScan(karto::Name("Custom Described Lidar"), candidatePoseTransform);
-            Vertex<LocalizedRangeScan>* targetVertex = mapper_->GetGraph()->FindNearByScan(karto::Name("Custom Described Lidar"), matchedPoseTransform);
+            Vertex<LocalizedRangeScan>* sourceVertex = mapper_->GetGraph()->FindNearByScan(karto::Name("Custom Described Lidar"), candidatePose);
+            Vertex<LocalizedRangeScan>* targetVertex = mapper_->GetGraph()->FindNearByScan(karto::Name("Custom Described Lidar"), matchedPose);
             
             if (!sourceVertex || !targetVertex) {
                 RCLCPP_ERROR(node_->get_logger(), "Failed to find corresponding scans for camera loop closure.");

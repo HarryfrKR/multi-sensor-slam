@@ -19,7 +19,7 @@ class StaticTFBroadcaster(Node):
     def publish_transforms(self):
 
         q = quaternion_from_euler(0, 0, math.pi)
-        print(q)
+        # print(q)
 
         # RPLIDAR C1 -> base_link
         t1 = TransformStamped()

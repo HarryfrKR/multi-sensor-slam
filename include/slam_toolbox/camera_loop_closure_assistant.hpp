@@ -46,8 +46,8 @@ public:
         const std::shared_ptr<rmw_request_id_t> request_header,
         const std::shared_ptr<std_srvs::srv::Trigger::Request> req,
         std::shared_ptr<std_srvs::srv::Trigger::Response> resp);
-    bool transformPoseToLaserFrame(
-        const karto::Pose2 &pose_in_camera, karto::Pose2 &pose_in_laser);
+    // bool transformPoseToLaserFrame(
+    //     const karto::Pose2 &pose_in_camera, karto::Pose2 &pose_in_laser);
 
 private:
     void automaticLoopClosure();

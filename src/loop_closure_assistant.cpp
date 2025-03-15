@@ -212,8 +212,9 @@ void LoopClosureAssistant::publishGraph()
   edges_marker.type = visualization_msgs::msg::Marker::LINE_LIST;
   edges_marker.pose.orientation.w = 1;
   edges_marker.scale.x = 0.05;
-  edges_marker.color.b = 1; // Blue line for regular edges
-  edges_marker.color.a = 1;
+  edges_marker.color.r = 0.3;
+  edges_marker.color.b = 0.3; // Dark gray line for regular edges
+  edges_marker.color.a = 0.3;
   edges_marker.lifetime = rclcpp::Duration::from_seconds(0);
   edges_marker.points.reserve(edges.size() * 2);
 
@@ -241,8 +242,8 @@ void LoopClosureAssistant::publishGraph()
   camera_edges_marker.type = visualization_msgs::msg::Marker::LINE_LIST;
   camera_edges_marker.pose.orientation.w = 1;
   camera_edges_marker.scale.x = 0.05;
-  camera_edges_marker.color.r = 1; 
-  camera_edges_marker.color.b = 1; // Cyan line camera-based loop closures
+  camera_edges_marker.color.r = 0; 
+  camera_edges_marker.color.b = 1; // Blue line camera-based loop closures
   camera_edges_marker.color.a = 1;
   camera_edges_marker.lifetime = rclcpp::Duration::from_seconds(0);
   camera_edges_marker.points.reserve(edges.size() * 2);
@@ -262,9 +263,15 @@ void LoopClosureAssistant::publishGraph()
 
     auto link_info = dynamic_cast<const karto::LinkInfo *>(edge->GetLabel());
     if (link_info && link_info->is_from_camera) { 
+        RCLCPP_WARN(node_->get_logger(), "Adding camera edge: Source(%d) -> Target(%d)", source_id, target_id);
+        RCLCPP_WARN(node_->get_logger(), "Camera Pose 0: (%.3f, %.3f)", pose0.GetX(), pose0.GetY());
+        RCLCPP_WARN(node_->get_logger(), "Pose 1: (%.3f, %.3f)", pose1.GetX(), pose1.GetY());
         camera_edges_marker.points.push_back(p0);
         camera_edges_marker.points.push_back(p1);
     } else {
+        RCLCPP_WARN(node_->get_logger(), "Adding laser edge: Source(%d) -> Target(%d)", source_id, target_id);
+        RCLCPP_WARN(node_->get_logger(), "Laser Pose 0: (%.3f, %.3f)", pose0.GetX(), pose0.GetY());
+        RCLCPP_WARN(node_->get_logger(), "Pose 1: (%.3f, %.3f)", pose1.GetX(), pose1.GetY());
         edges_marker.points.push_back(p0);
         edges_marker.points.push_back(p1);
     }
@@ -274,13 +281,11 @@ void LoopClosureAssistant::publishGraph()
       localization_edges_marker.points.push_back(p1);
     }
   }
-  if (camera_edges_marker.points.empty()) {
-    RCLCPP_WARN(node_->get_logger(), "No camera-based loop closures detected!");
-}
-  //marray.markers.push_back(edges_marker);
+    
+  marray.markers.push_back(edges_marker);
   marray.markers.push_back(localization_edges_marker);
   marray.markers.push_back(camera_edges_marker); 
-
+  RCLCPP_WARN(node_->get_logger(), "Total Camera Edges: %zu", camera_edges_marker.points.size() / 2);
   interactive_server_->applyChanges();
   marker_publisher_->publish(marray);
 }
