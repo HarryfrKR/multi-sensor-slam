@@ -2,7 +2,8 @@
 #include <memory>
 
 #include <slam_toolbox/camera_loop_closure_assistant.hpp>
-#include "tf2_geometry_msgs/tf2_geometry_msgs.hpp"
+#include <tf2_geometry_msgs/tf2_geometry_msgs.hpp>
+#include <nav_msgs/msg/path.hpp>
 
 // #include <slam_toolbox/camera_utils.hpp>
 // #include <slam_toolbox/ORBextractor.h>
@@ -99,6 +100,63 @@ void CameraLoopClosureAssistant::setMapper(karto::Mapper * mapper)
 
 // }
 
+void CameraLoopClosureAssistant::publishKeyframePoses() {
+    nav_msgs::msg::Path keyframe_path_msg;
+    keyframe_path_msg.header.stamp = node_->now();
+    keyframe_path_msg.header.frame_id = "map";
+
+    for (size_t i = 0; i < keyframe_holder_->size(); i++) {
+        const auto& keyframe = keyframe_holder_->getKeyframe(i);
+
+        geometry_msgs::msg::PoseStamped pose_msg;
+        pose_msg.header.stamp = node_->now();
+        pose_msg.header.frame_id = "map";  
+        pose_msg.pose.position.x = keyframe.estimated_robot_pose.GetX();
+        pose_msg.pose.position.y = keyframe.estimated_robot_pose.GetY();
+        pose_msg.pose.position.z = 0.0;
+
+        tf2::Quaternion q;
+        q.setRPY(0, 0, keyframe.estimated_robot_pose.GetHeading());
+        pose_msg.pose.orientation.x = q.x();
+        pose_msg.pose.orientation.y = q.y();
+        pose_msg.pose.orientation.z = q.z();
+        pose_msg.pose.orientation.w = q.w();
+
+        keyframe_pose_pub_->publish(pose_msg);
+        keyframe_path_msg.poses.push_back(pose_msg);
+    }
+
+    keyframe_path_pub_->publish(keyframe_path_msg);
+}
+
+void CameraLoopClosureAssistant::visualizeKeyframeMatches(
+    const camera_utils::Keyframe& keyframe1, 
+    const camera_utils::Keyframe& keyframe2,
+    const cv::Mat& keyframe1_image, 
+    const cv::Mat& keyframe2_image,
+    const std::vector<cv::DMatch>& matches) 
+{
+    // if (keyframe1.image.empty() || keyframe2.image.empty()) {
+    //     RCLCPP_WARN(node_->get_logger(), "One or both keyframe images are empty, skipping visualization.");
+    //     return;
+    // }
+
+    // Draw matches between the keyframes
+    cv::Mat match_img;
+    cv::drawMatches(keyframe1_image, keyframe1.keypoints,
+                    keyframe2_image, keyframe2.keypoints,
+                    matches, match_img,
+                    cv::Scalar::all(-1), cv::Scalar::all(-1),
+                    std::vector<char>(), cv::DrawMatchesFlags::NOT_DRAW_SINGLE_POINTS);
+
+    // Show the matches
+    std::string filename = "/ros2_ws/data/keyframe_matches/" + std::to_string(keyframe1.index) + "_" + std::to_string(keyframe2.index) + ".png";
+    cv::imwrite(filename, match_img);
+    // cv::imshow("Keyframe Matches - Camera Loop Closure", match_img);
+    // cv::waitKey(1);  // Small delay for image update
+}
+
+
 void CameraLoopClosureAssistant::automaticLoopClosure() {
     std_srvs::srv::Trigger::Request::SharedPtr req = std::make_shared<std_srvs::srv::Trigger::Request>();
     std_srvs::srv::Trigger::Response::SharedPtr resp = std::make_shared<std_srvs::srv::Trigger::Response>();
@@ -117,7 +175,7 @@ bool CameraLoopClosureAssistant::manualLoopClosureCallback(
 
     size_t num_keyframes = keyframe_holder_->size();
     if (num_keyframes == 0) { return false; }
-    RCLCPP_INFO(node_->get_logger(), "Loop Closure Assistant - Total keyframes: %zu", num_keyframes);
+    //RCLCPP_INFO(node_->get_logger(), "Loop Closure Assistant - Total keyframes: %zu", num_keyframes);
 
     const auto& candidate_keyframe = keyframe_holder_->getKeyframe(num_keyframes - 1);
 
@@ -126,17 +184,17 @@ bool CameraLoopClosureAssistant::manualLoopClosureCallback(
         resp->success = false;
         return false;
     }
-    
+
     const std::vector<KeyPoint>& keypoints1 = candidate_keyframe.keypoints;
     const Mat& descriptors1 = candidate_keyframe.descriptors;
 
     int best_match_index = -1;
     int max_matches = 1;
-    int matchThreshold = 10; // tune
+    int matchThreshold = 50; // tune
     vector<DMatch> best_matches;
 
     // Search for the best matching past keyframe
-    for (size_t i = 0; i < num_keyframes - 1; i++) {
+    for (size_t i = 0; i < num_keyframes - 20; i++) {
 
         if (i >= keyframe_holder_->size()) {
             RCLCPP_ERROR(node_->get_logger(), "Keyframe index out of bounds: %zu (size: %zu)", i, keyframe_holder_->size());
@@ -159,7 +217,7 @@ bool CameraLoopClosureAssistant::manualLoopClosureCallback(
     }
 
     if (best_match_index == -1 || max_matches < matchThreshold) {
-        RCLCPP_WARN(node_->get_logger(), "No good keyframe match found for loop closure. (Threshold %d : Best match: %d)", matchThreshold, max_matches);
+        // RCLCPP_WARN(node_->get_logger(), "No good keyframe match found for loop closure. (Threshold %d : Best match: %d)", matchThreshold, max_matches);
         resp->success = false;
         resp->message = "No loop closure detected.";
         return false;
@@ -168,31 +226,37 @@ bool CameraLoopClosureAssistant::manualLoopClosureCallback(
     const auto& matched_keyframe = keyframe_holder_->getKeyframe(best_match_index);
     RCLCPP_INFO(node_->get_logger(), "Best match found: Current Keyframe %zu and Keyframe %d with %d keypoints", num_keyframes - 1, best_match_index, max_matches);
 
+    // if (collect_keyframes_ == true) {
+    //     RCLCPP_INFO(node_->get_logger(), "Visualizing keyframe matching");
+    //     auto vis_image1 = keyframe_holder_->getKeyframeImage(best_match_index);
+    //     auto vis_image2 = keyframe_holder_->getKeyframeImage(num_keyframes - 1);
+    //     visualizeKeyframeMatches(candidate_keyframe, matched_keyframe, vis_image2, vis_image1, best_matches);
+    // }
     const std::vector<KeyPoint>& keypoints_best = matched_keyframe.keypoints;
     const Mat& descriptors_best = matched_keyframe.descriptors;
 
     vector<DMatch> good_matches;
     double hamming_threshold = 50; 
 
-    // if Hamming dist low, goot match
-    for (const auto& match : best_matches) {
-        if (match.distance < hamming_threshold) {
-            good_matches.push_back(match);
-        }
-    }
+    // if Hamming dist low, good match
+    // for (const auto& match : best_matches) {
+    //     if (match.distance < hamming_threshold) {
+    //         good_matches.push_back(match);
+    //     }
+    // }
 
-    if (good_matches.size() < 8) {
-        RCLCPP_WARN(node_->get_logger(), "Too few reliable matches after filtering : %zu good matches", good_matches.size());
-        resp->success = false;
-        resp->message = "Too few matches for loop closure.";
-        return false;
-    }
+    // if (good_matches.size() < 8) {
+    //     RCLCPP_WARN(node_->get_logger(), "Too few reliable matches after filtering : %zu good matches", good_matches.size());
+    //     resp->success = false;
+    //     resp->message = "Too few matches for loop closure.";
+    //     return false;
+    // }
 
     Pose2 visualPose;
-    if (feature_extractor_->computeRelativePose(good_matches, keypoints1, keypoints_best, visualPose)) {
+    if (feature_extractor_->computeRelativePose(best_matches, keypoints1, keypoints_best, visualPose)) {
         
-        double translation_threshold = 0.2;  // cm 
-        double rotation_threshold = 0.1;  // rad
+        double translation_threshold = 0.25;  // 20cm 
+        double rotation_threshold = 0.15;  // rad
 
         double translation_magnitude = sqrt(pow(visualPose.GetX(), 2) + pow(visualPose.GetY(), 2));
         double rotation_change = fabs(visualPose.GetHeading());
@@ -203,6 +267,8 @@ bool CameraLoopClosureAssistant::manualLoopClosureCallback(
             Pose2 candidatePoseTransform, matchedPoseTransform;
             Pose2 candidatePose = candidate_keyframe.estimated_robot_pose;
             Pose2 matchedPose = matched_keyframe.estimated_robot_pose;
+
+            // visualizeKeyframeMatches(candidate_keyframe, matched_keyframe, good_matches);
     
             // transformPoseToLaserFrame(candidatePose, candidatePoseTransform);
             // transformPoseToLaserFrame(matchedPose, matchedPoseTransform);
@@ -225,16 +291,28 @@ bool CameraLoopClosureAssistant::manualLoopClosureCallback(
             mapper_->GetGraph()->ProcessLinkScans(sourceScan, targetScan, visualPose, visualCovariance, true);
             mapper_->GetGraph()->CorrectPoses();
 
-            RCLCPP_INFO(node_->get_logger(), "Loop closure successfully executed!");
+            RCLCPP_INFO(node_->get_logger(), "Loop closure successfully executed between keyframe %zu and Keyframe %d!", num_keyframes - 1, best_match_index);
+            // RCLCPP_INFO(node_->get_logger(), "Candidate Pose: (%.3f, %.3f, %.3f)", 
+            // candidatePose.GetX(), candidatePose.GetY(), candidatePose.GetHeading());
+
+            // RCLCPP_INFO(node_->get_logger(), "Matched Pose: (%.3f, %.3f, %.3f)", 
+            //             matchedPose.GetX(), matchedPose.GetY(), matchedPose.GetHeading());
+
+            if (collect_keyframes_ == true) {
+                RCLCPP_INFO(node_->get_logger(), "Visualizing keyframe matching");
+                auto vis_image1 = keyframe_holder_->getKeyframeImage(best_match_index);
+                auto vis_image2 = keyframe_holder_->getKeyframeImage(num_keyframes - 1);
+                visualizeKeyframeMatches(candidate_keyframe, matched_keyframe, vis_image2, vis_image1, best_matches);
+            }
             camera_loop_closure_cnt++;
             RCLCPP_INFO(node_->get_logger(), "Camera loop closure count : %d", camera_loop_closure_cnt);
 
             resp->success = true;
-            resp->message = "Loop closure detected and processed.";
+            //resp->message = "Loop closure detected and processed ";
             return true;
         }
     }
-
+    
     resp->success = false;
     resp->message = "Loop closure rejected (geometric check failed).";
     return false;

@@ -34,6 +34,7 @@
 
 #include "slam_toolbox/toolbox_types.hpp"
 #include "slam_toolbox/laser_utils.hpp"
+#include "slam_toolbox/camera_utils.hpp"
 #include "slam_toolbox/visualization_utils.hpp"
 
 namespace loop_closure_assistant
@@ -74,6 +75,7 @@ private:
 
   std::unique_ptr<tf2_ros::TransformBroadcaster> tfB_;
   laser_utils::ScanHolder * scan_holder_;
+  std::shared_ptr<camera_utils::KeyframeHolder> keyframe_holder_;
   rclcpp::Publisher<visualization_msgs::msg::MarkerArray>::SharedPtr marker_publisher_;
   rclcpp::Publisher<sensor_msgs::msg::LaserScan>::SharedPtr scan_publisher_;
   rclcpp::Service<slam_toolbox::srv::Clear>::SharedPtr ssClear_manual_;

@@ -29,16 +29,15 @@ private:
     std::shared_ptr<camera_utils::KeyframeHolder> keyframe_holder_; 
     std::shared_ptr<tf2_ros::Buffer> tf_buffer_;
     std::shared_ptr<tf2_ros::TransformListener> tf_listener_;
-
+    rclcpp::Time keyframe_time;
     std::shared_ptr<sensor_msgs::msg::Image> last_image_msg_; 
     std::vector<cv::KeyPoint> keypoints_;
     cv::Mat descriptors_; 
-    
     void imageCallback(const sensor_msgs::msg::Image::SharedPtr msg);
     void processKeyframe();
     void publishKeypoints(const std::vector<cv::KeyPoint>& keypoints, const cv::Mat &image);
     std::pair<std::vector<cv::KeyPoint>, cv::Mat> extractFeatures(const cv::Mat &image);
-    bool isKeyframe(const std::vector<cv::KeyPoint>& keypoints, const cv::Mat& descriptors);
+    bool isKeyframe(const sensor_msgs::msg::Image::SharedPtr msg, const std::vector<cv::KeyPoint>& keypoints, const cv::Mat& descriptors, rclcpp::Time time);
 };
 
 

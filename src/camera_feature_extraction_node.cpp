@@ -8,6 +8,7 @@
 #include <tf2_geometry_msgs/tf2_geometry_msgs.hpp>
 #include <tf2/utils.h>  
 #include <karto_sdk/Karto.h>
+#include <rcpputils/filesystem_helper.hpp>
 
 
 #include "slam_toolbox/camera_feature_extraction_node.hpp"
@@ -27,7 +28,6 @@ CameraFeatureExtractionNode::CameraFeatureExtractionNode(
     feature_extractor_ = std::make_shared<camera_utils::FeatureExtraction>();
     tf_buffer_ = std::make_shared<tf2_ros::Buffer>(this->get_clock());
     tf_listener_ = std::make_shared<tf2_ros::TransformListener>(*tf_buffer_, this);
-
     last_image_msg_ = nullptr;
     image_sub_ = this->create_subscription<sensor_msgs::msg::Image>(
         "/camera/camera/color/image_raw", rclcpp::QoS(1), 
@@ -79,7 +79,7 @@ void CameraFeatureExtractionNode::processKeyframe() {
         return;
     }
 
-    if (isKeyframe(keypoints_, descriptors_)) {
+    if (isKeyframe(last_image_msg_, keypoints_, descriptors_, this->now())) {
         RCLCPP_INFO(this->get_logger(), "Saved new keyframe.");
     }
 }
@@ -97,14 +97,31 @@ std::pair<std::vector<cv::KeyPoint>, cv::Mat> CameraFeatureExtractionNode::extra
     return {keypoints, descriptors};
 }
 
-bool CameraFeatureExtractionNode::isKeyframe(const std::vector<cv::KeyPoint>& keypoints, const cv::Mat& descriptors) {
+bool CameraFeatureExtractionNode::isKeyframe(const sensor_msgs::msg::Image::SharedPtr msg, const std::vector<cv::KeyPoint>& keypoints, const cv::Mat& descriptors, rclcpp::Time time) {
+    rclcpp::Time keyframe_time;
+    cv::Mat image;
+    try {
+        image = cv_bridge::toCvCopy(msg, "bgr8")->image;
+    } catch (const cv_bridge::Exception& e) {
+        RCLCPP_ERROR(this->get_logger(), "cv_bridge exception: %s", e.what());
+        return false;
+    }
+
+    std::string keyframe_dir = "keyframes/";
+    if (!rcpputils::fs::exists(keyframe_dir)) {
+        rcpputils::fs::create_directories(keyframe_dir);
+    }
+
     Pose2 estimatedPose = getRobotPose();
     
     if (keyframe_holder_->size() == 0) {
         previous_keyframe_pose_ = estimatedPose; 
-        Keyframe new_keyframe{keypoints, descriptors.clone(), estimatedPose};
+        Keyframe new_keyframe{keypoints, descriptors.clone(), estimatedPose, keyframe_time, keyframe_holder_->size() - 1};
         keyframe_holder_->addKeyframe(new_keyframe);
-        RCLCPP_INFO(this->get_logger(), "First frame - Saving as keyframe.");
+        keyframe_holder_->addKeyframeImage(image);
+        // RCLCPP_INFO(this->get_logger(), "First frame - Saving as keyframe.");
+        // std::string filename = keyframe_dir + "keyframe_0.png";
+        // cv::imwrite(filename, image);
         return true;
     }
 
@@ -113,7 +130,7 @@ bool CameraFeatureExtractionNode::isKeyframe(const std::vector<cv::KeyPoint>& ke
         const Keyframe& last_kf = keyframe_holder_->getKeyframe(keyframe_holder_->size() - 1);
         vector<DMatch> matches = feature_extractor_->matchFeatures(descriptors, last_kf.descriptors);
 
-        if (matches.size() < 30) { 
+        if (matches.size() < 20) { 
             RCLCPP_WARN(this->get_logger(), "Too few matches for relative pose estimation.");
             return false;
         }
@@ -136,10 +153,17 @@ bool CameraFeatureExtractionNode::isKeyframe(const std::vector<cv::KeyPoint>& ke
         // Check if movement is significant
         if (translation_magnitude > translation_threshold || dtheta > rotation_threshold) {
             previous_keyframe_pose_ = estimatedPose; 
-            Keyframe new_keyframe{keypoints, descriptors.clone(), estimatedPose};
+            Keyframe new_keyframe{keypoints, descriptors.clone(), estimatedPose, keyframe_time, keyframe_holder_->size() - 1};
             keyframe_holder_->addKeyframe(new_keyframe);
-            RCLCPP_INFO(this->get_logger(), "Added new keyframe with estimated pose (%.2f, %.2f, %.2f)",
-                        estimatedPose.GetX(), estimatedPose.GetY(), estimatedPose.GetHeading());
+            keyframe_holder_->addKeyframeImage(image);
+            // RCLCPP_INFO(this->get_logger(), "Added new keyframe with estimated pose (%.2f, %.2f, %.2f)",
+            //             estimatedPose.GetX(), estimatedPose.GetY(), estimatedPose.GetHeading());
+               
+            // Save the image with the keyframe ID
+            // int keyframe_id = keyframe_holder_->size() - 1;
+            // std::string filename = keyframe_dir + "keyframe_" + std::to_string(keyframe_id) + "_" + std::to_string(keyframe_time.seconds()) + ".png";
+            // cv::imwrite(filename, image);
+
             return true;
         } else {
             //RCLCPP_INFO(this->get_logger(), "No significant motion detected. Skipping keyframe.");

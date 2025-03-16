@@ -25,9 +25,22 @@ KeyframeHolder::~KeyframeHolder()
 {
 
 }
-
+std::vector<Keyframe> KeyframeHolder::getAllKeyframes() const {
+    return keyframes_;
+}
 void KeyframeHolder::addKeyframe(const Keyframe& keyframe) {
     keyframes_.push_back(keyframe);
+}
+
+void KeyframeHolder::addKeyframeImage(const cv::Mat& keyframe_image) {
+    keyframe_images_.push_back(keyframe_image);
+}
+
+const cv::Mat& KeyframeHolder::getKeyframeImage(int keyframe_index) {
+    if (keyframe_index < 0 || keyframe_index >= (int)keyframe_images_.size()) {
+        throw std::out_of_range("KeyframeHolder: Keyframe index out of range");
+    }
+    return keyframe_images_.at(keyframe_index);
 }
 
 const Keyframe& KeyframeHolder::getKeyframe(int id) const {
@@ -43,7 +56,7 @@ void KeyframeHolder::clear() {
 
 FeatureExtraction::FeatureExtraction() {
     try {
-        int nFeatures = 120;
+        int nFeatures = 200;
         float scaleFactor = 1.2f;
         int nLevels = 8;
         int iniThFAST = 30;
@@ -94,7 +107,25 @@ vector<DMatch> FeatureExtraction::matchFeatures(
     BFMatcher matcher(NORM_HAMMING, true);  // Brute-force matcher
     vector<DMatch> matches;
     matcher.match(descriptors1, descriptors2, matches);
-    return matches;
+
+    std::sort(matches.begin(), matches.end(), [](const DMatch &a, const DMatch &b) {
+        return a.distance < b.distance;
+    });
+
+    // double hamming_threshold = 50.0; // Keep only good matches (adjust this)
+    // vector<DMatch> good_matches;
+
+    // for (const auto& match : matches) {
+    //     if (match.distance < hamming_threshold) {
+    //         good_matches.push_back(match);
+    //     }
+    // }
+
+    size_t num_to_keep = matches.size() * 0.7; 
+    vector<DMatch> best_matches(matches.begin(), matches.begin() + num_to_keep);
+
+    // **Return the better-filtered list**
+    return best_matches;
 }
 
 vector<DMatch> FeatureExtraction::matchFeaturesFLANN(const Mat& descriptors1, const Mat& descriptors2) {

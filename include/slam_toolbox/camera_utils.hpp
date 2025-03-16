@@ -2,19 +2,18 @@
 #define CAMERA_UTILS_HPP_
 
 
-// Undefine any conflicting macros
+
 #ifdef forEach
 #undef forEach
 #endif
 
-// OpenCV includes
+#include <rclcpp/rclcpp.hpp>
 #include <opencv2/core/core.hpp>
 #include <opencv2/features2d.hpp>
 #include <opencv2/imgproc.hpp>
 #include <opencv2/calib3d.hpp>
 #include <karto_sdk/Karto.h>
 
-// ROS includes
 #include <sensor_msgs/msg/image.hpp>
 #include <sensor_msgs/msg/camera_info.hpp>
 #include <tf2_ros/transform_listener.h>
@@ -30,6 +29,8 @@ struct Keyframe {
     std::vector<cv::KeyPoint> keypoints;
     cv::Mat descriptors;
     karto::Pose2 estimated_robot_pose; 
+    rclcpp::Time timestamp;
+    int index;
 };
 
 // // ======================== Camera Metadata ============================
@@ -62,11 +63,15 @@ public:
 
     void addKeyframe(const Keyframe& keyframe);
     const Keyframe& getKeyframe(int id) const;
+    void addKeyframeImage(const cv::Mat& keyframe_image);
+    const cv::Mat& getKeyframeImage(int keyframe_index);
+    std::vector<Keyframe> getAllKeyframes() const;
     size_t size() const { return keyframes_.size(); }
     void clear();
 
 private:
     std::vector<Keyframe> keyframes_; // Store keyframes instead of plain images
+    std::vector<cv::Mat> keyframe_images_;
 };
 
 // ======================== Feature Extraction ============================

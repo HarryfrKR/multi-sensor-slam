@@ -11,10 +11,10 @@ class ImageSaver(Node):
     def __init__(self):
         super().__init__('image_saver')
         
-        # Create subscriber to image topic
+
         self.subscription = self.create_subscription(
             Image,
-            '/camera/camera/color/image_raw',  # Change this to your image topic
+            '/camera/camera/color/image_raw', 
             self.image_callback,
             10)
         
@@ -42,10 +42,10 @@ class ImageSaver(Node):
                 
                 self.image_count += 1
 
-                # Once 10 images are saved, stop the node
-                if self.image_count >= 30:
-                    self.get_logger().info("Successfully saved 10 images. Shutting down...")
-                    rclpy.shutdown()
+                # # Once 10 images are saved, stop the node
+                # if self.image_count >= 30:
+                #     self.get_logger().info("Successfully saved 10 images. Shutting down...")
+                #     rclpy.shutdown()
 
             except Exception as e:
                 self.get_logger().error(f"Failed to process image: {str(e)}")
