@@ -32,10 +32,6 @@ find_package(rviz_rendering REQUIRED)
 find_package(interactive_markers REQUIRED)
 find_package(Qt5 REQUIRED COMPONENTS Core Gui Widgets Test Concurrent)
 find_package(rclcpp_components REQUIRED)
-find_package(OpenCV REQUIRED)
-find_package(PCL REQUIRED)
-find_package(cv_bridge REQUIRED)
-find_package(tf2_geometry_msgs REQUIRED)
 
 #karto_sdk lib
 set(BUILD_SHARED_LIBS ON)
@@ -64,9 +60,6 @@ set(dependencies
   interactive_markers
   Qt5
   rclcpp_components
-  OpenCV
-  PCL
-  cv_bridge
 )
 
 set(libraries
@@ -98,13 +91,9 @@ include_directories(include lib/karto_sdk/include
                             ${Boost_INCLUDE_DIRS}
                             ${TBB_INCLUDE_DIRS}
                             ${CERES_INCLUDES}
-                            ${OpenCV_INCLUDE_DIRS}
-                            ${PCL_INCLUDE_DIRS}
-                            ${rclcpp_INCLUDE_DIRS}
 )
 
 add_definitions(${EIGEN3_DEFINITIONS})
-add_definitions(${OpenCV_DEFINITIONS})
 
 rosidl_generate_interfaces(${PROJECT_NAME}
   srv/Pause.srv
@@ -117,6 +106,7 @@ rosidl_generate_interfaces(${PROJECT_NAME}
   srv/AddSubmap.srv
   srv/DeserializePoseGraph.srv
   srv/SerializePoseGraph.srv
+  srv/CameraLoopClosure.srv
   DEPENDENCIES builtin_interfaces geometry_msgs std_msgs nav_msgs visualization_msgs
 )
 
@@ -152,11 +142,11 @@ target_link_libraries(ceres_solver_plugin "${cpp_typesupport_target}")
 pluginlib_export_plugin_description_file(slam_toolbox solver_plugins.xml)
 
 #### Tool lib for mapping
-add_library(toolbox_common src/slam_toolbox_common.cpp src/map_saver.cpp src/loop_closure_assistant.cpp src/laser_utils.cpp src/slam_mapper.cpp
-src/ORBextractor.cpp src/camera_loop_closure_assistant.cpp src/camera_utils.cpp src/camera_feature_extraction_node.cpp)
-ament_target_dependencies(toolbox_common ${dependencies})
-
-target_link_libraries(toolbox_common kartoSlamToolbox camera_utils ORBextractor ${OpenCV_LIBRARIES} ${Boost_LIBRARIES})
+add_library(toolbox_common src/slam_toolbox_common.cpp src/map_saver.cpp src/loop_closure_assistant.cpp src/laser_utils.cpp src/slam_mapper.cpp)
+ament_target_dependencies(toolbox_common
+  ${dependencies}
+)
+target_link_libraries(toolbox_common kartoSlamToolbox ${Boost_LIBRARIES})
 rosidl_get_typesupport_target(cpp_typesupport_target ${PROJECT_NAME} "rosidl_typesupport_cpp")
 target_link_libraries(toolbox_common "${cpp_typesupport_target}")
 
@@ -186,28 +176,13 @@ target_link_libraries(map_and_localization_slam_toolbox localization_slam_toolbo
 add_executable(map_and_localization_slam_toolbox_node src/experimental/slam_toolbox_map_and_localization_node.cpp)
 target_link_libraries(map_and_localization_slam_toolbox_node map_and_localization_slam_toolbox)
 
+add_library(camera_loop_closure_server src/camera_loop_closure_server.cpp)
+target_link_libraries(camera_loop_closure_server toolbox_common kartoSlamToolbox ${Boost_LIBRARIES})
+
 #### Merging maps tool
 add_executable(merge_maps_kinematic src/merge_maps_kinematic.cpp)
 target_link_libraries(merge_maps_kinematic kartoSlamToolbox toolbox_common)
 
-
-#### New Camera Feature Libraries
-add_library(camera_utils src/camera_utils.cpp)
-ament_target_dependencies(camera_utils ${dependencies})
-target_link_libraries(camera_utils kartoSlamToolbox ${OpenCV_LIBRARIES} ${PCL_LIBRARIES} ${cpp_typesupport_target})
- 
-add_library(ORBextractor src/ORBextractor.cpp)
-ament_target_dependencies(ORBextractor ${dependencies})
-target_link_libraries(ORBextractor ${OpenCV_LIBRARIES} ${PCL_LIBRARIES})
-
-add_executable(camera_feature_extraction_node src/camera_feature_extraction_node.cpp)
-ament_target_dependencies(camera_feature_extraction_node ${dependencies})
-target_link_libraries(camera_feature_extraction_node camera_utils ORBextractor kartoSlamToolbox ${OpenCV_LIBRARIES})
-
-add_library(camera_loop_closure_assistant src/camera_loop_closure_assistant.cpp)
-ament_target_dependencies(camera_loop_closure_assistant ${dependencies})
-target_link_libraries(camera_loop_closure_assistant camera_utils ORBextractor kartoSlamToolbox  tf2::tf2
-tf2_geometry_msgs::tf2_geometry_msgs ${OpenCV_LIBRARIES} ${cpp_typesupport_target})
 #### testing
 #if(BUILD_TESTING)
 #  find_package(ament_cmake_gtest REQUIRED)
@@ -229,32 +204,12 @@ install(TARGETS async_slam_toolbox_node
                 sync_slam_toolbox_node
                 localization_slam_toolbox_node
                 map_and_localization_slam_toolbox_node
-                camera_feature_extraction_node
                 merge_maps_kinematic
                 ${libraries}
                 kartoSlamToolbox
   ARCHIVE DESTINATION lib
   LIBRARY DESTINATION lib
   RUNTIME DESTINATION lib/${PROJECT_NAME}
-)
-
-
-install(
-  PROGRAMS src/tf_broadcaster_node.py
-  DESTINATION lib/${PROJECT_NAME}
-)
-
-# Install ORBextractor library
-install(TARGETS ORBextractor
-  ARCHIVE DESTINATION lib
-  LIBRARY DESTINATION lib
-  RUNTIME DESTINATION bin
-)
- 
-install(TARGETS camera_utils
-  ARCHIVE DESTINATION lib
-  LIBRARY DESTINATION lib
-  RUNTIME DESTINATION bin
 )
 
 install(TARGETS SlamToolboxPlugin

@@ -49,13 +49,10 @@
 #include "slam_toolbox/map_saver.hpp"
 #include "slam_toolbox/loop_closure_assistant.hpp"
 
-#include "slam_toolbox/camera_utils.hpp"
-#include "slam_toolbox/camera_feature_extraction_node.hpp"
-#include "slam_toolbox/camera_loop_closure_assistant.hpp"
-
 namespace slam_toolbox
 {
 
+// dirty, dirty cheat I love
 using namespace ::toolbox_types;  // NOLINT
 using namespace ::karto;  // NOLINT
 
@@ -165,9 +162,7 @@ protected:
   std::unique_ptr<pose_utils::GetPoseHelper> pose_helper_;
   std::unique_ptr<map_saver::MapSaver> map_saver_;
   std::unique_ptr<loop_closure_assistant::LoopClosureAssistant> closure_assistant_;
-  std::shared_ptr<loop_closure_assistant::CameraLoopClosureAssistant> camera_closure_assistant_;
   std::unique_ptr<laser_utils::ScanHolder> scan_holder_;
-  std::shared_ptr<camera_utils::KeyframeHolder> keyframe_holder_;
 
   // Internal state
   std::vector<std::unique_ptr<boost::thread>> threads_;

@@ -5413,7 +5413,6 @@ class LocalizedRangeScan : public LaserRangeScan
 public:
   // @cond EXCLUDE
   KARTO_Object(LocalizedRangeScan)
-  kt_bool is_from_camera_; 
   // @endcond
 
 public:
@@ -5422,13 +5421,11 @@ public:
    */
   LocalizedRangeScan(const Name & rSensorName, const RangeReadingsVector & rReadings)
   : LaserRangeScan(rSensorName, rReadings),
-    is_from_camera_(false),
     m_IsDirty(true)
   {
   }
 
   LocalizedRangeScan()
-  : is_from_camera_(false)
   {}
 
   /**
@@ -5442,15 +5439,6 @@ private:
   mutable std::shared_mutex m_Lock;
 
 public:
-  inline void SetCameraConstraint(bool is_camera) 
-  { 
-    is_from_camera_ = is_camera; 
-  }
-
-  inline bool IsCameraConstraint() const 
-  { 
-    return is_from_camera_; 
-  }
   /**
    * Gets the odometric pose of this scan
    * @return odometric pose of this scan
@@ -5958,7 +5946,7 @@ public:
    */
   static OccupancyGrid * CreateFromScans(
     const LocalizedRangeScanVector & rScans,
-    kt_double resolution)
+    kt_double resolution, kt_int32u min_pass_through, kt_double occupancy_threshold)
   {
     if (rScans.empty()) {
       return NULL;
@@ -5968,6 +5956,8 @@ public:
     Vector2<kt_double> offset;
     ComputeDimensions(rScans, resolution, width, height, offset);
     OccupancyGrid * pOccupancyGrid = new OccupancyGrid(width, height, offset, resolution);
+    pOccupancyGrid->SetMinPassThrough(min_pass_through); 
+    pOccupancyGrid->SetOccupancyThreshold(occupancy_threshold); 
     pOccupancyGrid->CreateFromScans(rScans);
 
     return pOccupancyGrid;

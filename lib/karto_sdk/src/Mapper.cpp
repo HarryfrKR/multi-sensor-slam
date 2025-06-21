@@ -1500,6 +1500,7 @@ void MapperGraph::AddEdges(LocalizedRangeScan * pScan, const Matrix3 & rCovarian
 kt_bool MapperGraph::TryCloseLoop(LocalizedRangeScan * pScan, const Name & rSensorName)
 {
   kt_bool loopClosed = false;
+
   kt_int32u scanIndex = 0;
 
   LocalizedRangeScanVector candidateChain = FindPossibleLoopClosure(pScan, rSensorName, scanIndex);
@@ -1550,6 +1551,8 @@ kt_bool MapperGraph::TryCloseLoop(LocalizedRangeScan * pScan, const Name & rSens
         m_pMapper->FireEndLoopClosure("Loop closed!");
 
         loopClosed = true;
+        std::cout << "Loop closed with scan: " << pScan->GetStateId() <<
+          " and chain of size: " << candidateChain.size() << std::endl;
       }
     }
 
@@ -1877,7 +1880,7 @@ Vertex<LocalizedRangeScan> * MapperGraph::FindNearByScan(Name name, const Pose2 
 {
   VertexMap vertexMap = GetVertices();
   std::map<int, Vertex<LocalizedRangeScan> *> & vertices = vertexMap[name];
-  // std::cout << "Total vertices in graph: " << vertexMap[name].size() << std::endl;
+
   std::vector<Vertex<LocalizedRangeScan> *> vertices_to_search;
   std::map<int, Vertex<LocalizedRangeScan> *>::iterator it;
   for (it = vertices.begin(); it != vertices.end(); ++it) {
@@ -1902,7 +1905,7 @@ Vertex<LocalizedRangeScan> * MapperGraph::FindNearByScan(Name name, const Pose2 
   std::vector<double> out_dist_sqr(num_results);
   const double query_pt[2] = {refPose.GetX(), refPose.GetY()};
   num_results = index.knnSearch(&query_pt[0], num_results, &ret_index[0], &out_dist_sqr[0]);
-  // std::cout << "KD-Tree Search: Pose(" << query_pt[0] << ", " << query_pt[1]  << ") → Found " << num_results << " scans." << std::endl;
+
   if (num_results > 0) {
     return vertices_to_search[ret_index[0]];
   } else {
@@ -2021,19 +2024,7 @@ void MapperGraph::CorrectPoses()
       if (scan == NULL) {
         continue;
       }
-      const karto::Pose2& correctedPose = iter->second; 
-      double camera_correction_scale = 1.0;          // correction scaling for camera-based constraints
-
-      if (scan->IsCameraConstraint()) {
-          Pose2 adjustedPose(
-              correctedPose.GetX() * camera_correction_scale ,  
-              correctedPose.GetY() * camera_correction_scale,    
-              correctedPose.GetHeading() * camera_correction_scale 
-          );
-          scan->SetCorrectedPoseAndUpdate(adjustedPose);
-      } else {
-          scan->SetCorrectedPoseAndUpdate(correctedPose);
-      }
+      scan->SetCorrectedPoseAndUpdate(iter->second);
     }
 
     pSolver->Clear();
@@ -2296,12 +2287,24 @@ void Mapper::InitializeParameters()
     "Minimum value of the distance penalty multiplier so scores do not "
     "become too small.",
     0.5, GetParameterManager());
-
+  
   m_pUseResponseExpansion = new Parameter<kt_bool>(
     "UseResponseExpansion",
     "Whether to increase the search space if no good matches are initially "
     "found.",
     false, GetParameterManager());
+
+  m_pMinPassThrough = new Parameter<kt_int32u>(
+    "MinPassThrough",
+    "Number of beams that must pass through a cell before it will be considered to be occupied "
+    "or unoccupied.  This prevents stray beams from messing up the map. "
+    "found.",
+    2, GetParameterManager());
+  
+  m_pOccupancyThreshold = new Parameter<kt_double>(
+    "OccupancyThreshold",
+    "Minimum ratio of beams hitting cell to beams passing through cell to be marked as occupied",
+    0.1, GetParameterManager());
 }
 /* Adding in getters and setters here for easy parameter access */
 
@@ -2458,6 +2461,16 @@ bool Mapper::getParamUseResponseExpansion()
   return static_cast<bool>(m_pUseResponseExpansion->GetValue());
 }
 
+int Mapper::getParamMinPassThrough()
+{
+  return static_cast<int>(m_pMinPassThrough->GetValue());
+}
+
+double Mapper::getParamOccupancyThreshold()
+{
+  return static_cast<double>(m_pOccupancyThreshold->GetValue());
+}
+
 /* Setters for parameters */
 // General Parameters
 void Mapper::setParamUseScanMatching(bool b)
@@ -2608,6 +2621,16 @@ void Mapper::setParamMinimumDistancePenalty(double d)
 void Mapper::setParamUseResponseExpansion(bool b)
 {
   m_pUseResponseExpansion->SetValue((kt_bool)b);
+}
+
+void Mapper::setParamMinPassThrough(int i)
+{
+  m_pMinPassThrough->SetValue((kt_int32u)i);
+}
+
+void Mapper::setParamOccupancyThreshold(double d)
+{
+  m_pOccupancyThreshold->SetValue((kt_double)d);
 }
 
 

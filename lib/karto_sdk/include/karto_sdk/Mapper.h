@@ -174,6 +174,28 @@ public:
    * @param rPose1
    * @param rPose2
    * @param rCovariance
+   */
+  void Update(const Pose2 & rPose1, const Pose2 & rPose2, const Matrix3 & rCovariance)
+  {
+    m_Pose1 = rPose1;
+    m_Pose2 = rPose2;
+
+    // transform second pose into the coordinate system of the first pose
+    Transform transform(rPose1, Pose2());
+    m_PoseDifference = transform.TransformPose(rPose2);
+
+    // transform covariance into reference of first pose
+    Matrix3 rotationMatrix;
+    rotationMatrix.FromAxisAngle(0, 0, 1, -rPose1.GetHeading());
+
+    m_Covariance = rotationMatrix * rCovariance * rotationMatrix.Transpose();
+  }
+
+  /**
+   * Changes the link information to be the given parameters
+   * @param rPose1
+   * @param rPose2
+   * @param rCovariance
    * @param is_from_camera
    */
   void Update(const Pose2 & rPose1, const Pose2 & rPose2, const Matrix3 & rCovariance, bool from_camera)
@@ -228,21 +250,12 @@ public:
   {
     return m_Covariance;
   }
-    /**
-   * Checks if this link is from a camera-based loop closure
-   * @return True if this is a camera constraint, False otherwise
-   */
-  inline bool IsCameraConstraint() const
-  {
-    return is_camera_constraint_;
-  }
 
 private:
   Pose2 m_Pose1;
   Pose2 m_Pose2;
   Pose2 m_PoseDifference;
   Matrix3 m_Covariance;
-  bool is_camera_constraint_;
 
   friend class boost::serialization::access;
   template<class Archive>
@@ -253,7 +266,6 @@ private:
     ar & BOOST_SERIALIZATION_NVP(m_Pose2);
     ar & BOOST_SERIALIZATION_NVP(m_PoseDifference);
     ar & BOOST_SERIALIZATION_NVP(m_Covariance);
-    ar & BOOST_SERIALIZATION_NVP(is_camera_constraint_); 
   }
 };    // LinkInfo
 
@@ -662,7 +674,7 @@ public:
     }
     m_Vertices.clear();
 
-    forEach(typename std::vector<Edge<T> *>, &m_Edges)
+    forEachR(typename std::vector<Edge<T> *>, &m_Edges)
     {
       delete *iter;
       *iter = nullptr;
@@ -740,7 +752,6 @@ public:
   virtual ~MapperGraph();
 
 public:
-
   void ProcessLinkScans(LocalizedRangeScan* pScan1, LocalizedRangeScan* pScan2, 
     const Pose2& relativePose, const Matrix3& covariance, bool is_from_camera) {
      LinkScans(pScan1, pScan2, relativePose, covariance, is_from_camera);
@@ -871,6 +882,7 @@ private:
    * @param pToScan
    * @param rMean
    * @param rCovariance
+   * @param is_from_camera
    */
   void LinkScans(
     LocalizedRangeScan * pFromScan,
@@ -885,6 +897,7 @@ private:
    * @param rMeans
    * @param rCovariances
    */
+
   void LinkNearChains(
     LocalizedRangeScan * pScan, Pose2Vector & rMeans,
     std::vector<Matrix3> & rCovariances);
@@ -2379,6 +2392,13 @@ protected:
   // whether to increase the search space if no good matches are initially found
   Parameter<kt_bool> * m_pUseResponseExpansion;
 
+  // Number of beams that must pass through a cell before it will be considered to be occupied 
+  // or unoccupied.  This prevents stray beams from messing up the map. 
+  Parameter<kt_int32u> * m_pMinPassThrough;
+
+  // Minimum ratio of beams hitting cell to beams passing through cell to be marked as occupied
+  Parameter<kt_double> * m_pOccupancyThreshold;
+
   friend class boost::serialization::access;
   template<class Archive>
   void serialize(Archive & ar, const unsigned int version)
@@ -2423,6 +2443,9 @@ protected:
     ar & BOOST_SERIALIZATION_NVP(m_pMinimumAnglePenalty);
     ar & BOOST_SERIALIZATION_NVP(m_pMinimumDistancePenalty);
     ar & BOOST_SERIALIZATION_NVP(m_pUseResponseExpansion);
+// NOTE: the following two lines are commented out to avoid breaking the serialization of already existing maps
+//    ar & BOOST_SERIALIZATION_NVP(m_pMinPassThrough); 
+//    ar & BOOST_SERIALIZATION_NVP(m_pOccupancyThreshold);
     std::cout << "**Finished serializing Mapper**\n";
   }
 
@@ -2466,6 +2489,8 @@ public:
   double getParamMinimumAnglePenalty();
   double getParamMinimumDistancePenalty();
   bool getParamUseResponseExpansion();
+  int getParamMinPassThrough();
+  double getParamOccupancyThreshold();
 
   /* Setters */
   // General Parameters
@@ -2504,6 +2529,8 @@ public:
   void setParamMinimumAnglePenalty(double d);
   void setParamMinimumDistancePenalty(double d);
   void setParamUseResponseExpansion(bool b);
+  void setParamMinPassThrough(int i);
+  void setParamOccupancyThreshold(double d);
 };
 BOOST_SERIALIZATION_ASSUME_ABSTRACT(Mapper)
 }  // namespace karto
